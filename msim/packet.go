@@ -24,7 +24,7 @@ import (
 */
 
 // login
-func handleClientAuthentication(client Msim_client) bool {
+func handleClientAuthentication(client *Msim_client) bool {
 	util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 		msim_new_data_string("lc", "1"),
 		msim_new_data_string("nc", base64.StdEncoding.EncodeToString([]byte(client.Nonce))),
@@ -42,7 +42,7 @@ func handleClientAuthentication(client Msim_client) bool {
 
 	acc := getUserData(username)
 	client.Account = acc
-
+	util.Debug("%s", client.Account.Screenname)
 	uid := acc.Uid
 	sessionkey := GenerateSessionKey()
 	screenname := acc.Screenname
@@ -101,7 +101,7 @@ func handleClientAuthentication(client Msim_client) bool {
 }
 
 // handleUserLookupPacket
-func handleClientPacketUserLookup(client Msim_client, packet []byte) {
+func handleClientPacketUserLookup(client *Msim_client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
@@ -129,6 +129,5 @@ func handleClientPacketUserLookup(client Msim_client, packet []byte) {
 			})),
 		})
 		util.WriteTraffic(client.Connection, res)
-
 	}
 }
