@@ -100,35 +100,37 @@ func handleClientAuthentication(client Msim_client) bool {
 	return false
 }
 
-// handleUserLookupPacket
+// Status Messages
+func handleClientSetStatusMessages(client Msim_client, packet []byte) {
+	//\status\5\sesskey\28266\statstring\\locstring\\final\
+}
+
+// Persist 1;0;1
 func handleClientPacketUserLookup(client Msim_client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
 
-	if cmd == 1 && dsn == "5" && lid == "7" {
-		parsedbody := strings.Split(findValueFromKey("body", packet), "=")
-		accountRow := getUserData(parsedbody[1])
-		res := buildDataPacket([]msim_data_pair{
-			msim_new_data_boolean("persistr"),
-			msim_new_data_int("uid", client.Account.Uid),
-			msim_new_data_int("cmd", cmd^256),
-			msim_new_data_string("dsn", dsn),
-			msim_new_data_string("lid", lid),
-			msim_new_data_string("rid", findValueFromKey("rid", packet)),
-			msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
-				msim_new_data_string(parsedbody[0], parsedbody[1]),
-				msim_new_data_int("UserID", accountRow.Uid),
-				msim_new_data_string("ImageURL", escapeString(accountRow.Avatar)),
-				msim_new_data_string("DisplayName", accountRow.Screenname),
-				msim_new_data_string("BandName", accountRow.BandName),
-				msim_new_data_string("SongName", accountRow.SongName),
-				msim_new_data_string("Age", accountRow.Age),
-				msim_new_data_string("Gender", accountRow.Gender),
-				msim_new_data_string("Location", accountRow.Location),
-			})),
-		})
-		util.WriteTraffic(client.Connection, res)
-
-	}
+	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
+	accountRow := getUserData(parsedbody[1])
+	res := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr"),
+		msim_new_data_int("uid", client.Account.Uid),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_string(parsedbody[0], parsedbody[1]),
+			msim_new_data_int("UserID", accountRow.Uid),
+			msim_new_data_string("ImageURL", escapeString(accountRow.Avatar)),
+			msim_new_data_string("DisplayName", accountRow.Screenname),
+			msim_new_data_string("BandName", accountRow.BandName),
+			msim_new_data_string("SongName", accountRow.SongName),
+			msim_new_data_string("Age", accountRow.Age),
+			msim_new_data_string("Gender", accountRow.Gender),
+			msim_new_data_string("Location", accountRow.Location),
+		})),
+	})
+	util.WriteTraffic(client.Connection, res)
 }

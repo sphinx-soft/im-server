@@ -2,11 +2,20 @@ package msim
 
 import (
 	"phantom/util"
+	"strings"
 	"time"
 )
 
 func handleClientIncomingPackets(client Msim_client, data []byte) {
-	handleClientPacketUserLookup(client, data)
+	str := string(data)
+
+	switch {
+	case strings.Contains(str, "\\persist"):
+		handleClientPacketUserLookup(client, data)
+	case strings.Contains(str, "\\status"):
+		handleClientSetStatusMessages(client, data)
+	}
+
 }
 
 func HandleClientKeepalive(client Msim_client) {
