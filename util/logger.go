@@ -10,9 +10,9 @@ func Log(prefix string, text string, format ...any) {
 }
 
 func Error(text string, format ...any) {
-	Log("Error", text, format)
+	Log("Error", text, format...)
 }
 
 func Debug(text string, format ...any) {
-	Log("Debug", text, format)
+	Log("Debug", text, format...)
 }
