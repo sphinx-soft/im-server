@@ -110,15 +110,15 @@ func handleClientPacketUserLookup(client Msim_client, packet []byte) {
 		parsedbody := strings.Split(findValueFromKey("body", packet), "=")
 		accountRow := getUserData(parsedbody[1])
 		res := buildDataPacket([]msim_data_pair{
-			msim_new_data_string("persistr", "1"),
-			msim_new_data_string("uid", strconv.Itoa(client.Account.Uid)),
+			msim_new_data_boolean("persistr"),
+			msim_new_data_int("uid", client.Account.Uid),
 			msim_new_data_int("cmd", cmd^256),
 			msim_new_data_string("dsn", dsn),
 			msim_new_data_string("lid", lid),
 			msim_new_data_string("rid", findValueFromKey("rid", packet)),
 			msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
 				msim_new_data_string(parsedbody[0], parsedbody[1]),
-				msim_new_data_string("UserID", strconv.Itoa(accountRow.Uid)),
+				msim_new_data_int("UserID", accountRow.Uid),
 				msim_new_data_string("ImageURL", escapeString(accountRow.Avatar)),
 				msim_new_data_string("DisplayName", accountRow.Screenname),
 				msim_new_data_string("BandName", accountRow.BandName),
