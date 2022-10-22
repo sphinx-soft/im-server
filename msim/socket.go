@@ -22,7 +22,7 @@ func HandleClientKeepalive(client Msim_client) {
 }
 
 func HandleClients(client Msim_client) {
-	util.Log("MySpaceIM", "Client awaiting authentication from ", client.Connection.RemoteAddr())
+	util.Log("MySpaceIM", "Client awaiting authentication from %s", client.Connection.RemoteAddr().String())
 
 	if !handleClientAuthentication(client) {
 		client.Connection.Close()
@@ -37,6 +37,6 @@ func HandleClients(client Msim_client) {
 		}
 	}
 
-	util.Log("MySpaceIM", "Client Disconnected! | Screenname: ", client.Account.Screenname)
+	util.Log("MySpaceIM", "Client Disconnected! | Screenname: %s", client.Account.Screenname)
 	client.Connection.Close()
 }
