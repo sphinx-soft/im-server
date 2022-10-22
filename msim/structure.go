@@ -1,12 +1,28 @@
 package msim
 
-import "math/rand"
+import "net"
 
-func generateNonce() string {
-	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	b := make([]rune, 0x40)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
+type msim_data_pair struct {
+	Key   string
+	Value string
+}
+
+type Msim_client struct {
+	Connection net.Conn
+	Nonce      string
+	Sessionkey int
+	Account    Account
+}
+
+type Account struct {
+	Uid        int
+	Username   string
+	Password   string
+	Screenname string
+	Avatar     string
+	BandName   string
+	SongName   string
+	Age        string
+	Gender     string
+	Location   string
 }
