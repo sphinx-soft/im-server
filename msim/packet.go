@@ -108,23 +108,24 @@ func handleClientPacketUserLookup(client Msim_client, packet []byte) {
 
 	if cmd == 1 && dsn == "5" && lid == "7" {
 		parsedbody := strings.Split(findValueFromKey("body", packet), "=")
+		accountRow := getUserData(parsedbody[1])
 		res := buildDataPacket([]msim_data_pair{
 			msim_new_data_string("persistr", "1"),
-			msim_new_data_string("uid", "1"),
+			msim_new_data_string("uid", strconv.Itoa(client.Account.Uid)),
 			msim_new_data_int("cmd", cmd^256),
 			msim_new_data_string("dsn", dsn),
 			msim_new_data_string("lid", lid),
 			msim_new_data_string("rid", findValueFromKey("rid", packet)),
 			msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
 				msim_new_data_string(parsedbody[0], parsedbody[1]),
-				msim_new_data_string("UserID", "12"),
-				msim_new_data_string("ImageURL", "http:/1/1tim.is-a-failure.lol/1content/1cdn/11Bft1CL3Yv61/1Code_Z9yVNLY1tA.png"),
-				msim_new_data_string("DisplayName", "Tim2"),
-				msim_new_data_string("BandName", "soos"),
-				msim_new_data_string("SongName", "Hitler"),
-				msim_new_data_string("Age", "69"),
-				msim_new_data_string("Gender", "Attack Chopper"),
-				msim_new_data_string("Location", "Usbekistan"),
+				msim_new_data_string("UserID", strconv.Itoa(accountRow.Uid)),
+				msim_new_data_string("ImageURL", escapeString(accountRow.Avatar)),
+				msim_new_data_string("DisplayName", accountRow.Screenname),
+				msim_new_data_string("BandName", accountRow.BandName),
+				msim_new_data_string("SongName", accountRow.SongName),
+				msim_new_data_string("Age", accountRow.Age),
+				msim_new_data_string("Gender", accountRow.Gender),
+				msim_new_data_string("Location", accountRow.Location),
 			})),
 		})
 		util.WriteTraffic(client.Connection, res)

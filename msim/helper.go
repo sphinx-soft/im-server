@@ -85,6 +85,8 @@ func getUserData(username string) Account {
 	return acc
 }
 
-//func escapeString(data string) string {
-//	retu
-//}
+func escapeString(data string) string {
+	res := strings.Replace(data, "/", "/1", -1)
+	res = strings.Replace(res, "\\", "\\2", -1)
+	return res
+}
