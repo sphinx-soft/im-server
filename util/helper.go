@@ -14,6 +14,7 @@ func ConvertToUtf16(input string) []byte {
 	}
 	return bytes
 }
+
 func DecryptRC4(pwd []byte, data []byte) []byte {
 	c, err := rc4.NewCipher(pwd)
 	if err != nil {

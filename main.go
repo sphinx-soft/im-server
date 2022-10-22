@@ -22,8 +22,8 @@ func port1863Handler() {
 			Nonce:      msim.GenerateNonce(),
 		}
 
-		go msim.HandleClients(Msim)
-		go msim.HandleClientKeepalive(Msim)
+		go msim.HandleClients(&Msim)
+		go msim.HandleClientKeepalive(&Msim)
 
 	}
 }

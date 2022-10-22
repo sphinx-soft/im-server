@@ -6,19 +6,31 @@ import (
 	"time"
 )
 
-func handleClientIncomingPackets(client Msim_client, data []byte) {
+func handleCLientIncomingPersistPackets(client *Msim_client, data []byte) {
+	str := string(data)
+
+	switch {
+	case strings.Contains(str, "\\cmd\\1"):
+		switch {
+		case strings.Contains(str, "\\dsn\\5\\lid\\7"):
+			handleClientPacketUserLookupByUsernameOrEmail(client, data)
+		}
+	}
+}
+
+func handleClientIncomingPackets(client *Msim_client, data []byte) {
 	str := string(data)
 
 	switch {
 	case strings.Contains(str, "\\persist"):
-		handleClientPacketUserLookup(client, data)
+		handleCLientIncomingPersistPackets(client, data)
 	case strings.Contains(str, "\\status"):
 		handleClientSetStatusMessages(client, data)
 	}
 
 }
 
-func HandleClientKeepalive(client Msim_client) {
+func HandleClientKeepalive(client *Msim_client) {
 	for {
 		time.Sleep(180 * time.Second)
 		err := util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
@@ -30,14 +42,14 @@ func HandleClientKeepalive(client Msim_client) {
 	}
 }
 
-func HandleClients(client Msim_client) {
+func HandleClients(client *Msim_client) {
 	util.Log("MySpaceIM", "Client awaiting authentication from %s", client.Connection.RemoteAddr().String())
 
 	if !handleClientAuthentication(client) {
 		client.Connection.Close()
 		return
 	}
-
+	Clients = append(Clients, client)
 	for {
 		data, success := util.ReadTraffic(client.Connection)
 		handleClientIncomingPackets(client, data)
@@ -47,5 +59,11 @@ func HandleClients(client Msim_client) {
 	}
 
 	util.Log("MySpaceIM", "Client Disconnected! | Screenname: %s", client.Account.Screenname)
+	for i := 0; i < len(Clients); i++ {
+		if Clients[i].Account.Username == client.Account.Username {
+			util.Debug("Removing from clients array")
+			Clients = ArrayRemove(Clients, i)
+		}
+	}
 	client.Connection.Close()
 }
