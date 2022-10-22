@@ -19,8 +19,12 @@ func msim_new_data_dictonary(key string, value string) msim_data_pair {
 	return msim_new_data_string(key, value)
 }
 
-func msim_new_data_boolean(key string) msim_data_pair {
-	return msim_data_pair{Key: key, Value: "1"}
+func msim_new_data_boolean(key string, value bool) msim_data_pair {
+	if value {
+		return msim_data_pair{Key: key, Value: "1"}
+	} else {
+		return msim_data_pair{Key: key, Value: "1"}
+	}
 }
 
 func findValueFromKey(key string, packet []byte) string {
@@ -77,6 +81,19 @@ func getUserData(username string) Account {
 	var acc Account
 
 	row, _ := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE username= ?", username)
+	row.Next()
+	row.Scan(&acc.Uid, &acc.Username, &acc.Password, &acc.Screenname, &acc.Avatar,
+		&acc.BandName, &acc.SongName, &acc.Age, &acc.Gender, &acc.Location)
+	row.Close()
+
+	return acc
+}
+
+func getUserDataById(userid int) Account {
+
+	var acc Account
+
+	row, _ := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE id= ?", userid)
 	row.Next()
 	row.Scan(&acc.Uid, &acc.Username, &acc.Password, &acc.Screenname, &acc.Avatar,
 		&acc.BandName, &acc.SongName, &acc.Age, &acc.Gender, &acc.Location)

@@ -6,14 +6,20 @@ import (
 	"time"
 )
 
-func handleCLientIncomingPersistPackets(client *Msim_client, data []byte) {
+func handleClientIncomingPersistPackets(client *Msim_client, data []byte) {
 	str := string(data)
 
-	switch {
-	case strings.Contains(str, "\\cmd\\1"):
-		switch {
-		case strings.Contains(str, "\\dsn\\5\\lid\\7"):
-			handleClientPacketUserLookupByUsernameOrEmail(client, data)
+	if strings.Contains(str, "\\persist\\1") {
+		if strings.Contains(str, "\\cmd\\1") {
+			if strings.Contains(str, "\\dsn\\1") {
+				if strings.Contains(str, "lid\\7") || strings.Contains(str, "lid\\17") {
+					handleClientPacketUserLookupByUid(client, data)
+				}
+			}
+
+			if strings.Contains(str, "\\dsn\\5") && strings.Contains(str, "\\lid\\7") {
+				handleClientPacketUserLookupByUsernameOrEmail(client, data)
+			}
 		}
 	}
 }
@@ -21,20 +27,16 @@ func handleCLientIncomingPersistPackets(client *Msim_client, data []byte) {
 func handleClientIncomingPackets(client *Msim_client, data []byte) {
 	str := string(data)
 
-	switch {
-	case strings.Contains(str, "\\persist"):
-		handleCLientIncomingPersistPackets(client, data)
-	case strings.Contains(str, "\\status"):
+	if strings.Contains(str, "\\status") {
 		handleClientSetStatusMessages(client, data)
 	}
-
 }
 
 func HandleClientKeepalive(client *Msim_client) {
 	for {
 		time.Sleep(180 * time.Second)
 		err := util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
-			msim_new_data_boolean("ka"),
+			msim_new_data_boolean("ka", true),
 		}))
 		if err != nil {
 			break
@@ -53,6 +55,7 @@ func HandleClients(client *Msim_client) {
 	for {
 		data, success := util.ReadTraffic(client.Connection)
 		handleClientIncomingPackets(client, data)
+		handleClientIncomingPersistPackets(client, data)
 		if !success {
 			break
 		}

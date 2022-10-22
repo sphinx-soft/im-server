@@ -91,10 +91,10 @@ func handleClientAuthentication(client *Msim_client) bool {
 		return true
 	} else {
 		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
-			msim_new_data_boolean("error"),
+			msim_new_data_boolean("error", true),
 			msim_new_data_string("errmsg", "The password provided is incorrect."),
 			msim_new_data_string("err", "260"),
-			msim_new_data_boolean("fatal"),
+			msim_new_data_boolean("fatal", true),
 		}))
 	}
 	return false
@@ -103,6 +103,43 @@ func handleClientAuthentication(client *Msim_client) bool {
 // Status Messages
 func handleClientSetStatusMessages(client *Msim_client, packet []byte) {
 	//\status\5\sesskey\28266\statstring\\locstring\\final\
+	print("test\n")
+}
+
+// Persist 1;4;3
+func handleClientPacketUserLookupByUid(client *Msim_client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+
+	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
+	parse, _ := strconv.Atoi(parsedbody[1])
+	accountRow := getUserDataById(parse)
+	res := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.Uid),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_int("UserID", accountRow.Uid),
+			msim_new_data_string("Sound", "true"),
+			msim_new_data_int("!PrivacyMode", 0),
+			msim_new_data_string("!ShowOnlyToList", "false"),
+			msim_new_data_int("!OfflineMessageMode", 2),
+			msim_new_data_string("Headline", "test"),
+			msim_new_data_string("Avatarurl", accountRow.Avatar),
+			msim_new_data_int("Alert", 1),
+			msim_new_data_string("!ShowAvatar", "true"),
+			msim_new_data_string("IMName", accountRow.Screenname),
+			msim_new_data_int("!ClientVersion", 999),
+			msim_new_data_string("!AllowBrowse", "true"),
+			msim_new_data_string("IMLang", "English"),
+			msim_new_data_int("LangID", 8192),
+		})),
+	})
+	util.WriteTraffic(client.Connection, res)
 }
 
 // Persist 1;5;7
@@ -114,7 +151,7 @@ func handleClientPacketUserLookupByUsernameOrEmail(client *Msim_client, packet [
 	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
 	accountRow := getUserData(parsedbody[1])
 	res := buildDataPacket([]msim_data_pair{
-		msim_new_data_boolean("persistr"),
+		msim_new_data_boolean("persistr", true),
 		msim_new_data_int("uid", client.Account.Uid),
 		msim_new_data_int("cmd", cmd^256),
 		msim_new_data_string("dsn", dsn),
