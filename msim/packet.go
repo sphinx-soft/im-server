@@ -46,7 +46,7 @@ func handleClientAuthentication(client *Msim_client) bool {
 	sessionkey := GenerateSessionKey()
 	screenname := acc.Screenname
 	password := acc.Password
-
+	client.Sessionkey = sessionkey
 	byte_nc2 := make([]byte, 32)
 	byte_rc4_key := make([]byte, 16)
 	byte_challenge := []byte(client.Nonce)
@@ -101,8 +101,21 @@ func handleClientAuthentication(client *Msim_client) bool {
 
 // Status Messages
 func handleClientPacketSetStatusMessages(client *Msim_client, packet []byte) {
-	//\status\5\sesskey\28266\statstring\\locstring\\final\
-	print("test\n")
+	status := findValueFromKey("status", packet)
+	statstring := findValueFromKey("statstring", packet)
+
+	client.StatusCode = status
+	client.StatusText = statstring
+
+	for i := 0; i < len(Clients); i++ {
+		if Clients[i].Account.Uid != client.Account.Uid {
+			util.WriteTraffic(Clients[i].Connection, buildDataPacket([]msim_data_pair{
+				msim_new_data_int("bm", 100),
+				msim_new_data_int("f", client.Account.Uid),
+				msim_new_data_string("msg", "|s|"+status+"|ss|"+statstring+""),
+			}))
+		}
+	}
 }
 
 // addbuddy message
@@ -125,6 +138,18 @@ func handleClientPacketAddBuddy(client *Msim_client, packet []byte) {
 	}
 	dbres, _ := util.GetDatabaseHandle().Query("INSERT into contacts (`fromid`, `id`, `reason`) VALUES (?, ?, ?)", client.Account.Uid, newprofileid, reason)
 	dbres.Close()
+}
+
+func handleClientOfflineEvents(client *Msim_client) {
+	for i := 0; i < len(Clients); i++ {
+		if Clients[i].Account.Uid != client.Account.Uid {
+			util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
+				msim_new_data_int("bm", 100),
+				msim_new_data_int("f", Clients[i].Account.Uid),
+				msim_new_data_string("msg", "|s|"+Clients[i].StatusCode+"|ss|"+Clients[i].StatusText),
+			}))
+		}
+	}
 }
 
 // persist 1;0;1 get_contact_information

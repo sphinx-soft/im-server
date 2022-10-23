@@ -21,6 +21,8 @@ type Msim_client struct {
 	Nonce      string
 	Sessionkey int
 	Account    Account
+	StatusCode string
+	StatusText string
 }
 
 type Account struct {

@@ -78,7 +78,9 @@ func HandleClients(client *Msim_client) {
 		client.Connection.Close()
 		return
 	}
+
 	Clients = append(Clients, client)
+	handleClientOfflineEvents(client)
 	for {
 		data, success := util.ReadTraffic(client.Connection)
 
@@ -98,6 +100,17 @@ func HandleClients(client *Msim_client) {
 	}
 
 	util.Log("MySpaceIM", "Client Disconnected! | Screenname: %s", client.Account.Screenname)
+
+	//notify all users that user logged out
+	for i := 0; i < len(Clients); i++ {
+		if Clients[i].Account.Uid != client.Account.Uid {
+			util.WriteTraffic(Clients[i].Connection, buildDataPacket([]msim_data_pair{
+				msim_new_data_int("bm", 100),
+				msim_new_data_int("f", client.Account.Uid),
+				msim_new_data_string("msg", "|s|0|ss|"+client.StatusText),
+			}))
+		}
+	}
 	for i := 0; i < len(Clients); i++ {
 		if Clients[i].Account.Username == client.Account.Username {
 			util.Debug("Removing from clients array")
