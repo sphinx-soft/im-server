@@ -15,6 +15,10 @@ func msim_new_data_int(key string, value int) msim_data_pair {
 	return msim_data_pair{Key: key, Value: strconv.Itoa(value)}
 }
 
+func msim_new_data_int64(key string, value int64) msim_data_pair {
+	return msim_data_pair{Key: key, Value: strconv.FormatInt(value, 10)}
+}
+
 func msim_new_data_dictonary(key string, value string) msim_data_pair {
 	return msim_new_data_string(key, value)
 }

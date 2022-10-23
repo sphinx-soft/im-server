@@ -33,4 +33,11 @@ type Account struct {
 	Location   string
 }
 
+type OfflineMessage struct {
+	fromid int
+	toid   int
+	date   int64
+	msg    string
+}
+
 var Clients []*Msim_client

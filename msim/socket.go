@@ -57,6 +57,9 @@ func handleClientIncomingPackets(client *Msim_client, data []byte) {
 	if strings.Contains(str, "\\addbuddy") {
 		handleClientPacketAddBuddy(client, data)
 	}
+	if strings.Contains(str, "\\bm\\1") {
+		handleClientPacketBuddyInstantMessage(client, data)
+	}
 }
 
 func HandleClientKeepalive(client *Msim_client) {

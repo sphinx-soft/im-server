@@ -6,6 +6,7 @@ import (
 	"phantom/util"
 	"strconv"
 	"strings"
+	"time"
 )
 
 /*
@@ -148,6 +149,48 @@ func handleClientOfflineEvents(client *Msim_client) {
 				msim_new_data_int("f", Clients[i].Account.Uid),
 				msim_new_data_string("msg", "|s|"+Clients[i].StatusCode+"|ss|"+Clients[i].StatusText),
 			}))
+		}
+	}
+
+	//offline messages
+	res, _ := util.GetDatabaseHandle().Query("SELECT * from offlinemessages WHERE toid= ?", client.Account.Uid)
+	for res.Next() {
+		var msg OfflineMessage
+		_ = res.Scan(&msg.fromid, &msg.toid, &msg.date, &msg.msg)
+		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
+			msim_new_data_int("bm", 1),
+			msim_new_data_int("sesskey", client.Sessionkey),
+			msim_new_data_int("f", msg.fromid),
+			msim_new_data_int64("date", msg.date),
+			msim_new_data_string("msg", msg.msg),
+		}))
+	}
+	res.Close()
+	res2, _ := util.GetDatabaseHandle().Query("DELETE from offlinemessages WHERE toid= ?", client.Account.Uid)
+	res2.Close()
+}
+
+// bm type 1
+func handleClientPacketBuddyInstantMessage(client *Msim_client, packet []byte) {
+	t, _ := strconv.Atoi(findValueFromKey("t", packet))
+	msg := findValueFromKey("msg", packet)
+	date := time.Now().UTC().UnixNano()
+	found := false
+	for i := 0; i < len(Clients); i++ {
+		if Clients[i].Account.Uid == t {
+			found = true
+			util.WriteTraffic(Clients[i].Connection, buildDataPacket([]msim_data_pair{
+				msim_new_data_int("bm", 1),
+				msim_new_data_int("sesskey", Clients[i].Sessionkey),
+				msim_new_data_int("f", client.Account.Uid),
+				msim_new_data_string("msg", msg),
+			}))
+		}
+	}
+	if !found {
+		if !strings.Contains(msg, "%typing%") && !strings.Contains(msg, "%stoptyping%") {
+			res, _ := util.GetDatabaseHandle().Query("INSERT INTO offlinemessages (`fromid`, `toid`, `date`, `msg`) VALUES (?, ?, ?, ?)", client.Account.Uid, t, date, msg)
+			res.Close()
 		}
 	}
 }
