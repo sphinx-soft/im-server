@@ -12,17 +12,21 @@ func handleClientIncomingPersistPackets(client *Msim_client, data []byte) {
 	if strings.Contains(str, "\\persist\\1") {
 		if strings.Contains(str, "\\cmd\\1") {
 			if strings.Contains(str, "\\dsn\\1") {
-				if strings.Contains(str, "lid\\7") || strings.Contains(str, "lid\\4") || strings.Contains(str, "lid\\17") {
-					handleClientPacketUserLookupIMByUidOrMyself(client, data)
+				if strings.Contains(str, "lid\\4") {
+					handleClientPacketUserLookupIMAboutMyself(client, data)
+				}
+
+				if strings.Contains(str, "lid\\7") || strings.Contains(str, "lid\\17") {
+					handleClientPacketUserLookupIMByUid(client, data)
 				}
 			}
 			if strings.Contains(str, "\\dsn\\4") {
-				if strings.Contains(str, "lid\\5") || strings.Contains(str, "lid\\3") {
-					handleClientPacketUserLookupMySpaceByUidOrMyself(client, data)
+				if strings.Contains(str, "lid\\3") || strings.Contains(str, "lid\\5") {
+					handleClientPacketUserLookupMySpaceByUid(client, data)
 				}
 			}
 			if strings.Contains(str, "\\dsn\\5") && strings.Contains(str, "\\lid\\7") {
-				handleClientPacketUserLookupByUsernameOrEmail(client, data)
+				handleClientPacketUserLookupMySpaceByUsernameOrEmail(client, data)
 			}
 		}
 	}
