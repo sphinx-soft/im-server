@@ -21,6 +21,15 @@ func handleClientIncomingPersistPackets(client *Msim_client, data []byte) {
 					handleClientPacketUserLookupMySpaceByUidOrMyself(client, data)
 				}
 			}
+			if strings.Contains(str, "\\dsn\\0") && strings.Contains(str, "\\lid\\2") {
+				handleClientPacketGetContactInformation(client, data)
+			}
+			if strings.Contains(str, "\\dsn\\2") && strings.Contains(str, "\\lid\\6") {
+				handleClientPacketGetGroups(client, data)
+			}
+			if strings.Contains(str, "\\dsn\\0") && strings.Contains(str, "\\lid\\1") {
+				handleClientPacketGetContactList(client, data)
+			}
 			if strings.Contains(str, "\\dsn\\5") && strings.Contains(str, "\\lid\\7") {
 				handleClientPacketUserLookupByUsernameOrEmail(client, data)
 			}
@@ -33,6 +42,9 @@ func handleClientIncomingPackets(client *Msim_client, data []byte) {
 
 	if strings.Contains(str, "\\status") {
 		handleClientSetStatusMessages(client, data)
+	}
+	if strings.Contains(str, "\\addbuddy") {
+		handleClientAddBuddy(client, data)
 	}
 }
 

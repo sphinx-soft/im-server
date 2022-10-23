@@ -105,7 +105,29 @@ func handleClientSetStatusMessages(client *Msim_client, packet []byte) {
 	print("test\n")
 }
 
-// Persist 1;1;4, 1;1;7
+// addbuddy message
+func handleClientAddBuddy(client *Msim_client, packet []byte) {
+	if findValueFromKey("newprofileid", packet) == "6221" {
+		util.Debug("dummy packet detected")
+		return
+	}
+	newprofileid := findValueFromKey("newprofileid", packet)
+	reason := findValueFromKey("reason", packet)
+
+	var count int
+	check, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE id=?", newprofileid)
+	check.Next()
+	check.Scan(&count)
+	check.Close()
+	if count > 0 {
+		util.Debug("buddy is already added")
+		return
+	}
+	dbres, _ := util.GetDatabaseHandle().Query("INSERT into contacts (`fromid`, `id`, `reason`) VALUES (?, ?, ?)", client.Account.Uid, newprofileid, reason)
+	dbres.Close()
+}
+
+// Persist 1;1;4, 1;1;7, 1;1;17
 func handleClientPacketUserLookupIMByUidOrMyself(client *Msim_client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
@@ -113,7 +135,6 @@ func handleClientPacketUserLookupIMByUidOrMyself(client *Msim_client, packet []b
 
 	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
 
-	util.Debug("%d", len(parsedbody))
 	var parse int
 	if len(parsedbody) > 1 {
 		parse, _ = strconv.Atoi(parsedbody[1])
@@ -135,7 +156,7 @@ func handleClientPacketUserLookupIMByUidOrMyself(client *Msim_client, packet []b
 			msim_new_data_int("!PrivacyMode", 0),
 			msim_new_data_string("!ShowOnlyToList", "False"),
 			msim_new_data_int("!OfflineMessageMode", 2),
-			msim_new_data_string("Headline", "schneider"),
+			msim_new_data_string("Headline", "schneider"), //TODO
 			msim_new_data_string("Avatarurl", escapeString(accountRow.Avatar)),
 			msim_new_data_int("Alert", 1),
 			msim_new_data_string("!ShowAvatar", "True"),
@@ -149,12 +170,112 @@ func handleClientPacketUserLookupIMByUidOrMyself(client *Msim_client, packet []b
 	util.WriteTraffic(client.Connection, res)
 }
 
+// persist 1;2;6
+// \persist\1\sesskey\7920\cmd\1\dsn\2\uid\1\lid\6\rid\8\body\\final\
+func handleClientPacketGetGroups(client *Msim_client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+
+	util.Debug("get_contact_groups")
+	res := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.Uid),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_int("GroupID", 21672248),
+			msim_new_data_string("GroupName", "IM Friends"),
+			msim_new_data_int("Position", 1),
+			msim_new_data_int("GroupFlag", 131073),
+		})),
+	})
+	util.WriteTraffic(client.Connection, res)
+}
+
+// persist 1;0;1 get_contact_information
+func handleClientPacketGetContactList(client *Msim_client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+	util.Debug("get_contact_list")
+	res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid=?", client.Account.Uid)
+	body := ""
+	for res.Next() {
+		var contact Contact
+		_ = res.Scan(&contact.fromid, &contact.id, &contact.reason)
+		accountRow := getUserDataById(contact.id)
+		body += buildDataBody([]msim_data_pair{
+			msim_new_data_int("ContactID", accountRow.Uid),
+			msim_new_data_string("Headline", "schneider"),   //TODO
+			msim_new_data_int("Position", 1),                //TODO
+			msim_new_data_string("GroupName", "IM Friends"), //TODO
+			msim_new_data_int("Visibility", 1),
+			msim_new_data_string("ShowAvatar", "True"),
+			msim_new_data_string("AvatarUrl", escapeString(accountRow.Avatar)),
+			msim_new_data_int("LastLogin", 128177889600000000), //TODO
+			msim_new_data_string("IMName", accountRow.Username),
+			msim_new_data_string("NickName", accountRow.Screenname),
+			msim_new_data_int("NameSelect", 0),
+			msim_new_data_string("OfflineMsg", "im offline"),
+			msim_new_data_int("SkyStatus", 0),
+		})
+	}
+	res.Close()
+	resp := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.Uid),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", body),
+	})
+	util.WriteTraffic(client.Connection, resp)
+}
+
+// persist 1;0;2 get_contact_information
+func handleClientPacketGetContactInformation(client *Msim_client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+
+	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
+
+	util.Debug("get_contact_information")
+	parse, _ := strconv.Atoi(parsedbody[1])
+
+	accountRow := getUserDataById(parse)
+	res := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.Uid),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_int("ContactID", accountRow.Uid),
+			msim_new_data_string("Headline", "schneider"),    //TODO
+			msim_new_data_int("Position", 1),                 //TODO
+			msim_new_data_string("!GroupName", "IM Friends"), //TODO
+			msim_new_data_int("Visibility", 2),
+			msim_new_data_string("!ShowAvatar", "True"),
+			msim_new_data_string("!AvatarUrl", escapeString(accountRow.Avatar)),
+			msim_new_data_int("!NameSelect", 0),
+			msim_new_data_string("IMName", accountRow.Username),
+			msim_new_data_string("!NickName", accountRow.Screenname),
+		})),
+	})
+	util.WriteTraffic(client.Connection, res)
+}
+
 // Persist 1;4;5, 1;4;3
 func handleClientPacketUserLookupMySpaceByUidOrMyself(client *Msim_client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
-	util.Debug("todo")
 	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
 
 	parse, _ := strconv.Atoi(parsedbody[1])
@@ -167,6 +288,7 @@ func handleClientPacketUserLookupMySpaceByUidOrMyself(client *Msim_client, packe
 		msim_new_data_string("lid", lid),
 		msim_new_data_string("rid", findValueFromKey("rid", packet)),
 		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_string("UserName", accountRow.Username),
 			msim_new_data_int("UserID", accountRow.Uid),
 			msim_new_data_string("ImageURL", escapeString(accountRow.Avatar)),
 			msim_new_data_string("DisplayName", accountRow.Screenname),

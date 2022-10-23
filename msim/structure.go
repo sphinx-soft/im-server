@@ -11,7 +11,11 @@ type msim_data_pair struct {
 	Key   string
 	Value string
 }
-
+type Contact struct {
+	fromid int
+	id     int
+	reason string
+}
 type Msim_client struct {
 	Connection net.Conn
 	Nonce      string
