@@ -2,11 +2,6 @@ package msim
 
 import "net"
 
-func ArrayRemove(s []*Msim_client, i int) []*Msim_client {
-	s[i] = s[len(s)-1]
-	return s[:len(s)-1]
-}
-
 type msim_data_pair struct {
 	Key   string
 	Value string

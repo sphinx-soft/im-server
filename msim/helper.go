@@ -107,3 +107,8 @@ func escapeString(data string) string {
 	res = strings.Replace(res, "\\", "\\2", -1)
 	return res
 }
+
+func ArrayRemove(s []*Msim_client, i int) []*Msim_client {
+	s[i] = s[len(s)-1]
+	return s[:len(s)-1]
+}
