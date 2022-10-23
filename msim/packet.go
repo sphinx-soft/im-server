@@ -259,16 +259,16 @@ func handleClientPacketUserLookupIMByUid(client *Msim_client, packet []byte) {
 		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
 			msim_new_data_int("UserID", accountRow.Uid),
 			msim_new_data_string("Sound", "True"),
-			msim_new_data_int("!PrivacyMode", 0),
-			msim_new_data_string("!ShowOnlyToList", "False"),
-			msim_new_data_int("!OfflineMessageMode", 2),
-			msim_new_data_string("Headline", "schneider"),
+			msim_new_data_int("!PrivacyMode", 0),             // TODO
+			msim_new_data_string("!ShowOnlyToList", "False"), // TODO
+			msim_new_data_int("!OfflineMessageMode", 2),      // TODO
+			msim_new_data_string("Headline", "schneider"),    // TODO
 			msim_new_data_string("Avatarurl", escapeString(accountRow.Avatar)),
-			msim_new_data_int("Alert", 1),
-			msim_new_data_string("!ShowAvatar", "True"),
+			msim_new_data_int("Alert", 1),               //TODO
+			msim_new_data_string("!ShowAvatar", "True"), // TODO
 			msim_new_data_string("IMName", accountRow.Screenname),
 			msim_new_data_int("!ClientVersion", 999),
-			msim_new_data_string("!AllowBrowse", "True"),
+			msim_new_data_string("!AllowBrowse", "True"), // TODO
 			msim_new_data_string("IMLang", "English"),
 			msim_new_data_int("LangID", 8192),
 		})),
