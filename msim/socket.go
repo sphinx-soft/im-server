@@ -12,11 +12,15 @@ func handleClientIncomingPersistPackets(client *Msim_client, data []byte) {
 	if strings.Contains(str, "\\persist\\1") {
 		if strings.Contains(str, "\\cmd\\1") {
 			if strings.Contains(str, "\\dsn\\1") {
-				if strings.Contains(str, "lid\\7") || strings.Contains(str, "lid\\17") {
-					handleClientPacketUserLookupByUid(client, data)
+				if strings.Contains(str, "lid\\7") || strings.Contains(str, "lid\\4") || strings.Contains(str, "lid\\17") {
+					handleClientPacketUserLookupIMByUidOrMyself(client, data)
 				}
 			}
-
+			if strings.Contains(str, "\\dsn\\4") {
+				if strings.Contains(str, "lid\\5") || strings.Contains(str, "lid\\3") {
+					handleClientPacketUserLookupMySpaceByUidOrMyself(client, data)
+				}
+			}
 			if strings.Contains(str, "\\dsn\\5") && strings.Contains(str, "\\lid\\7") {
 				handleClientPacketUserLookupByUsernameOrEmail(client, data)
 			}
@@ -54,8 +58,17 @@ func HandleClients(client *Msim_client) {
 	Clients = append(Clients, client)
 	for {
 		data, success := util.ReadTraffic(client.Connection)
-		handleClientIncomingPackets(client, data)
-		handleClientIncomingPersistPackets(client, data)
+
+		//split packets that get sent simultaneously
+		receivedpackets := strings.Split(string(data), "final\\")
+		for i := 0; i < len(receivedpackets); i++ {
+			if strings.Contains(receivedpackets[i], "\\") {
+				util.Log("TCP", "Reading Data: %s", string(receivedpackets[i]+"final\\"))
+				handleClientIncomingPackets(client, []byte(receivedpackets[i]+"final\\"))
+				handleClientIncomingPersistPackets(client, []byte(receivedpackets[i]+"final\\"))
+			}
+		}
+
 		if !success {
 			break
 		}

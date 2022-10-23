@@ -42,7 +42,6 @@ func handleClientAuthentication(client *Msim_client) bool {
 
 	acc := getUserData(username)
 	client.Account = acc
-	util.Debug("%s", client.Account.Screenname)
 	uid := acc.Uid
 	sessionkey := GenerateSessionKey()
 	screenname := acc.Screenname
@@ -106,13 +105,58 @@ func handleClientSetStatusMessages(client *Msim_client, packet []byte) {
 	print("test\n")
 }
 
-// Persist 1;4;3
-func handleClientPacketUserLookupByUid(client *Msim_client, packet []byte) {
+// Persist 1;1;4, 1;1;7
+func handleClientPacketUserLookupIMByUidOrMyself(client *Msim_client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
 
 	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
+
+	util.Debug("%d", len(parsedbody))
+	var parse int
+	if len(parsedbody) > 1 {
+		parse, _ = strconv.Atoi(parsedbody[1])
+	} else {
+		parse = client.Account.Uid
+	}
+
+	accountRow := getUserDataById(parse)
+	res := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.Uid),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_int("UserID", accountRow.Uid),
+			msim_new_data_string("Sound", "True"),
+			msim_new_data_int("!PrivacyMode", 0),
+			msim_new_data_string("!ShowOnlyToList", "False"),
+			msim_new_data_int("!OfflineMessageMode", 2),
+			msim_new_data_string("Headline", "schneider"),
+			msim_new_data_string("Avatarurl", escapeString(accountRow.Avatar)),
+			msim_new_data_int("Alert", 1),
+			msim_new_data_string("!ShowAvatar", "True"),
+			msim_new_data_string("IMName", accountRow.Screenname),
+			msim_new_data_int("!ClientVersion", 999),
+			msim_new_data_string("!AllowBrowse", "True"),
+			msim_new_data_string("IMLang", "English"),
+			msim_new_data_int("LangID", 8192),
+		})),
+	})
+	util.WriteTraffic(client.Connection, res)
+}
+
+// Persist 1;4;5, 1;4;3
+func handleClientPacketUserLookupMySpaceByUidOrMyself(client *Msim_client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+	util.Debug("todo")
+	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
+
 	parse, _ := strconv.Atoi(parsedbody[1])
 	accountRow := getUserDataById(parse)
 	res := buildDataPacket([]msim_data_pair{
@@ -124,19 +168,14 @@ func handleClientPacketUserLookupByUid(client *Msim_client, packet []byte) {
 		msim_new_data_string("rid", findValueFromKey("rid", packet)),
 		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
 			msim_new_data_int("UserID", accountRow.Uid),
-			msim_new_data_string("Sound", "true"),
-			msim_new_data_int("!PrivacyMode", 0),
-			msim_new_data_string("!ShowOnlyToList", "false"),
-			msim_new_data_int("!OfflineMessageMode", 2),
-			msim_new_data_string("Headline", "test"),
-			msim_new_data_string("Avatarurl", accountRow.Avatar),
-			msim_new_data_int("Alert", 1),
-			msim_new_data_string("!ShowAvatar", "true"),
-			msim_new_data_string("IMName", accountRow.Screenname),
-			msim_new_data_int("!ClientVersion", 999),
-			msim_new_data_string("!AllowBrowse", "true"),
-			msim_new_data_string("IMLang", "English"),
-			msim_new_data_int("LangID", 8192),
+			msim_new_data_string("ImageURL", escapeString(accountRow.Avatar)),
+			msim_new_data_string("DisplayName", accountRow.Screenname),
+			msim_new_data_string("BandName", accountRow.BandName),
+			msim_new_data_string("SongName", accountRow.SongName),
+			msim_new_data_string("Age", accountRow.Age),
+			msim_new_data_string("Gender", accountRow.Gender),
+			msim_new_data_string("Location", accountRow.Location),
+			msim_new_data_int("!TotalFriends", 1), //TODO
 		})),
 	})
 	util.WriteTraffic(client.Connection, res)

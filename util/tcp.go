@@ -44,6 +44,5 @@ func ReadTraffic(client net.Conn) (data []byte, success bool) {
 		return buf, false
 	}
 
-	Log("TCP", "Reading Data: %s", string(buf))
 	return buf, true
 }
