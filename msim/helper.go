@@ -15,6 +15,10 @@ func msim_new_data_int(key string, value int) msim_data_pair {
 	return msim_data_pair{Key: key, Value: strconv.Itoa(value)}
 }
 
+func msim_new_data_int64(key string, value int64) msim_data_pair {
+	return msim_data_pair{Key: key, Value: strconv.FormatInt(value, 10)}
+}
+
 func msim_new_data_dictonary(key string, value string) msim_data_pair {
 	return msim_new_data_string(key, value)
 }
@@ -76,9 +80,9 @@ func GenerateSessionKey() int {
 	return rand.Intn(100000)
 }
 
-func getUserData(username string) Account {
+func getUserData(username string) Msim_Account {
 
-	var acc Account
+	var acc Msim_Account
 
 	row, _ := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE username= ?", username)
 	row.Next()
@@ -89,9 +93,9 @@ func getUserData(username string) Account {
 	return acc
 }
 
-func getUserDataById(userid int) Account {
+func getUserDataById(userid int) Msim_Account {
 
-	var acc Account
+	var acc Msim_Account
 
 	row, _ := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE id= ?", userid)
 	row.Next()
@@ -108,7 +112,7 @@ func escapeString(data string) string {
 	return res
 }
 
-func ArrayRemove(s []*Msim_client, i int) []*Msim_client {
+func ArrayRemove(s []*Msim_Client, i int) []*Msim_Client {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
 }

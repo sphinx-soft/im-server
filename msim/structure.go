@@ -6,23 +6,22 @@ type msim_data_pair struct {
 	Key   string
 	Value string
 }
-
-type Contact struct {
+type Msim_Contact struct {
 	fromid int
 	id     int
 	reason string
 }
-
-type Msim_client struct {
-	Connection net.Conn
-	Nonce      string
-	Sessionkey int
-	Account    Account
-	StatusCode string
-	StatusText string
+type Msim_Client struct {
+	Connection  net.Conn
+	Nonce       string
+	Sessionkey  int
+	Account     Msim_Account
+	StatusCode  string
+	StatusText  string
+	BuildNumber string
 }
 
-type Account struct {
+type Msim_Account struct {
 	Uid        int
 	Username   string
 	Password   string
@@ -35,4 +34,11 @@ type Account struct {
 	Location   string
 }
 
-var Clients []*Msim_client
+type Msim_OfflineMessage struct {
+	fromid int
+	toid   int
+	date   int64
+	msg    string
+}
+
+var Msim_Clients []*Msim_Client

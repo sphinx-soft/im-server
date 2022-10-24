@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func handleClientIncomingPersistPackets(client *Msim_client, data []byte) {
+func handleClientIncomingPersistPackets(client *Msim_Client, data []byte) {
 	str := string(data)
 
 	if strings.Contains(str, "\\persist\\1") {
@@ -48,7 +48,7 @@ func handleClientIncomingPersistPackets(client *Msim_client, data []byte) {
 	}
 }
 
-func handleClientIncomingPackets(client *Msim_client, data []byte) {
+func handleClientIncomingPackets(client *Msim_Client, data []byte) {
 	str := string(data)
 
 	if strings.Contains(str, "\\status") {
@@ -57,9 +57,12 @@ func handleClientIncomingPackets(client *Msim_client, data []byte) {
 	if strings.Contains(str, "\\addbuddy") {
 		handleClientPacketAddBuddy(client, data)
 	}
+	if strings.Contains(str, "\\bm\\1") {
+		handleClientPacketBuddyInstantMessage(client, data)
+	}
 }
 
-func HandleClientKeepalive(client *Msim_client) {
+func HandleClientKeepalive(client *Msim_Client) {
 	for {
 		time.Sleep(180 * time.Second)
 		err := util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
@@ -71,7 +74,7 @@ func HandleClientKeepalive(client *Msim_client) {
 	}
 }
 
-func HandleClients(client *Msim_client) {
+func HandleClients(client *Msim_Client) {
 	util.Log("MySpaceIM", "Client awaiting authentication from %s", client.Connection.RemoteAddr().String())
 
 	if !handleClientAuthentication(client) {
@@ -79,7 +82,17 @@ func HandleClients(client *Msim_client) {
 		return
 	}
 
-	Clients = append(Clients, client)
+	Msim_Clients = append(Msim_Clients, client)
+
+	global := util.Global_Client{
+		Client:   "MySpace",
+		Build:    client.BuildNumber,
+		Protocol: "MSIMv?",
+		Username: client.Account.Screenname,
+		Friends:  69, //TODO
+	}
+	util.AddGlobalClient(&global)
+
 	handleClientOfflineEvents(client)
 	for {
 		data, success := util.ReadTraffic(client.Connection)
@@ -102,19 +115,19 @@ func HandleClients(client *Msim_client) {
 	util.Log("MySpaceIM", "Client Disconnected! | Screenname: %s", client.Account.Screenname)
 
 	//notify all users that user logged out
-	for i := 0; i < len(Clients); i++ {
-		if Clients[i].Account.Uid != client.Account.Uid {
-			util.WriteTraffic(Clients[i].Connection, buildDataPacket([]msim_data_pair{
+	for i := 0; i < len(Msim_Clients); i++ {
+		if Msim_Clients[i].Account.Uid != client.Account.Uid {
+			util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
 				msim_new_data_int("bm", 100),
 				msim_new_data_int("f", client.Account.Uid),
 				msim_new_data_string("msg", "|s|0|ss|"+client.StatusText),
 			}))
 		}
 	}
-	for i := 0; i < len(Clients); i++ {
-		if Clients[i].Account.Username == client.Account.Username {
+	for i := 0; i < len(Msim_Clients); i++ {
+		if Msim_Clients[i].Account.Username == client.Account.Username {
 			util.Debug("Removing from clients array")
-			Clients = ArrayRemove(Clients, i)
+			Msim_Clients = ArrayRemove(Msim_Clients, i)
 		}
 	}
 	client.Connection.Close()
