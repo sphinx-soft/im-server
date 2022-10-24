@@ -104,7 +104,7 @@ func HandleClients(client *Msim_Client) {
 		receivedpackets := strings.Split(string(data), "final\\")
 		for i := 0; i < len(receivedpackets); i++ {
 			if strings.Contains(receivedpackets[i], "\\") {
-				util.Log("TCP", "Reading Data: %s", string(receivedpackets[i]+"final\\"))
+				util.Debug("MySpace -> HandleClients -> TCP", "Reading Split Data: %s", string(receivedpackets[i]+"final\\"))
 				handleClientIncomingPackets(client, []byte(receivedpackets[i]+"final\\"))
 				handleClientIncomingPersistPackets(client, []byte(receivedpackets[i]+"final\\"))
 			}
@@ -129,8 +129,8 @@ func HandleClients(client *Msim_Client) {
 	}
 	for i := 0; i < len(Msim_Clients); i++ {
 		if Msim_Clients[i].Account.Username == client.Account.Username {
-			util.Debug("Removing from clients array")
-			Msim_Clients = ArrayRemove(Msim_Clients, i)
+			util.Debug("MySpace -> HandleClients", "Removing from clients from List...")
+			Msim_Clients = RemoveMsimClient(Msim_Clients, i)
 		}
 	}
 	client.Connection.Close()

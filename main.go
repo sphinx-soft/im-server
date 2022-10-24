@@ -3,7 +3,9 @@ package main
 import (
 	"phantom/http"
 	"phantom/msim"
+	"phantom/msnp"
 	"phantom/util"
+	"strings"
 )
 
 func port1863Handler() {
@@ -15,16 +17,39 @@ func port1863Handler() {
 
 		if err != nil {
 			util.Error("Failed to accept Client! ", err.Error())
+		} else {
+			util.Debug("Port 1836 Handler", "Accepted Client")
 		}
 
-		Msim := msim.Msim_Client{
-			Connection: tcpClient,
-			Nonce:      msim.GenerateNonce(),
+		var msnp_client bool
+		data, success := util.ReadTrafficEx(tcpClient)
+
+		if success {
+			if strings.Contains(string(data), "VER") {
+				msnp_client = true
+			}
+		} else {
+			msnp_client = false
 		}
 
-		go msim.HandleClients(&Msim)
-		go msim.HandleClientKeepalive(&Msim)
+		// Handle MSNP DS Requests and redirect to 1864
+		if msnp_client {
+			Msnp := msnp.Msnp_Client{
+				Connection: tcpClient,
+			}
 
+			go msnp.HandleDispatch(&Msnp, string(data))
+
+		} else {
+			Msim := msim.Msim_Client{
+				Connection: tcpClient,
+				Nonce:      msim.GenerateNonce(),
+			}
+
+			go msim.HandleClients(&Msim)
+			go msim.HandleClientKeepalive(&Msim)
+
+		}
 	}
 }
 
@@ -38,6 +63,8 @@ func main() {
 	go port1863Handler()
 
 	util.Log("Handler", "Launched Handler for HTTP Server")
-	http.RunWebServer(80)
+	go http.RunWebServer(80)
 
+	util.Log("Handler", "Launched Handler for MSNP Notification")
+	msnp.HandleNotification()
 }
