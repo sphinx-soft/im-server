@@ -147,7 +147,7 @@ func handleClientPacketAddBuddy(client *Msim_Client, packet []byte) {
 }
 
 // delbuddy message
-func handleClientPacketDelBuddy(client *Msim_client, packet []byte) {
+func handleClientPacketDelBuddy(client *Msim_Client, packet []byte) {
 	delprofileid := findValueFromKey("delprofileid", packet)
 	dbres, _ := util.GetDatabaseHandle().Query("DELETE from contacts WHERE id=?", delprofileid)
 	dbres.Close()
