@@ -25,6 +25,21 @@ func DecryptRC4(pwd []byte, data []byte) []byte {
 	c.XORKeyStream(crypted, data)
 	return crypted
 }
+
 func EncryptRC4(pwd []byte, data []byte) []byte {
 	return DecryptRC4(pwd, data)
+}
+
+func AddGlobalClient(client *Global_Client) {
+	Global_Clients = append(Global_Clients, client)
+}
+
+func GetClientFromGlobalList(username string) *Global_Client {
+	for i := 0; i < len(Global_Clients); i++ {
+		if Global_Clients[i].Username == username {
+			return Global_Clients[i]
+		}
+	}
+
+	return nil
 }

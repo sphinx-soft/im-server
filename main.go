@@ -17,7 +17,7 @@ func port1863Handler() {
 			util.Error("Failed to accept Client! ", err.Error())
 		}
 
-		Msim := msim.Msim_client{
+		Msim := msim.Msim_Client{
 			Connection: tcpClient,
 			Nonce:      msim.GenerateNonce(),
 		}

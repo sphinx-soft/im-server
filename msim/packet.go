@@ -25,7 +25,7 @@ import (
 */
 
 // login
-func handleClientAuthentication(client *Msim_client) bool {
+func handleClientAuthentication(client *Msim_Client) bool {
 	util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 		msim_new_data_string("lc", "1"),
 		msim_new_data_string("nc", base64.StdEncoding.EncodeToString([]byte(client.Nonce))),
@@ -101,16 +101,16 @@ func handleClientAuthentication(client *Msim_client) bool {
 }
 
 // Status Messages
-func handleClientPacketSetStatusMessages(client *Msim_client, packet []byte) {
+func handleClientPacketSetStatusMessages(client *Msim_Client, packet []byte) {
 	status := findValueFromKey("status", packet)
 	statstring := findValueFromKey("statstring", packet)
 
 	client.StatusCode = status
 	client.StatusText = statstring
 
-	for i := 0; i < len(Clients); i++ {
-		if Clients[i].Account.Uid != client.Account.Uid {
-			util.WriteTraffic(Clients[i].Connection, buildDataPacket([]msim_data_pair{
+	for i := 0; i < len(Msim_Clients); i++ {
+		if Msim_Clients[i].Account.Uid != client.Account.Uid {
+			util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
 				msim_new_data_int("bm", 100),
 				msim_new_data_int("f", client.Account.Uid),
 				msim_new_data_string("msg", "|s|"+status+"|ss|"+statstring+""),
@@ -120,7 +120,7 @@ func handleClientPacketSetStatusMessages(client *Msim_client, packet []byte) {
 }
 
 // addbuddy message
-func handleClientPacketAddBuddy(client *Msim_client, packet []byte) {
+func handleClientPacketAddBuddy(client *Msim_Client, packet []byte) {
 	if findValueFromKey("newprofileid", packet) == "6221" {
 		util.Debug("dummy packet detected")
 		return
@@ -153,13 +153,13 @@ func handleClientPacketDelBuddy(client *Msim_client, packet []byte) {
 	dbres.Close()
 }
 
-func handleClientOfflineEvents(client *Msim_client) {
-	for i := 0; i < len(Clients); i++ {
-		if Clients[i].Account.Uid != client.Account.Uid {
+func handleClientOfflineEvents(client *Msim_Client) {
+	for i := 0; i < len(Msim_Clients); i++ {
+		if Msim_Clients[i].Account.Uid != client.Account.Uid {
 			util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 				msim_new_data_int("bm", 100),
-				msim_new_data_int("f", Clients[i].Account.Uid),
-				msim_new_data_string("msg", "|s|"+Clients[i].StatusCode+"|ss|"+Clients[i].StatusText),
+				msim_new_data_int("f", Msim_Clients[i].Account.Uid),
+				msim_new_data_string("msg", "|s|"+Msim_Clients[i].StatusCode+"|ss|"+Msim_Clients[i].StatusText),
 			}))
 		}
 	}
@@ -167,7 +167,7 @@ func handleClientOfflineEvents(client *Msim_client) {
 	//offline messages
 	res, _ := util.GetDatabaseHandle().Query("SELECT * from offlinemessages WHERE toid= ?", client.Account.Uid)
 	for res.Next() {
-		var msg OfflineMessage
+		var msg Msim_OfflineMessage
 		_ = res.Scan(&msg.fromid, &msg.toid, &msg.date, &msg.msg)
 		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 			msim_new_data_int("bm", 1),
@@ -184,17 +184,17 @@ func handleClientOfflineEvents(client *Msim_client) {
 }
 
 // bm type 1
-func handleClientPacketBuddyInstantMessage(client *Msim_client, packet []byte) {
+func handleClientPacketBuddyInstantMessage(client *Msim_Client, packet []byte) {
 	t, _ := strconv.Atoi(findValueFromKey("t", packet))
 	msg := findValueFromKey("msg", packet)
 	date := time.Now().UTC().UnixNano()
 	found := false
-	for i := 0; i < len(Clients); i++ {
-		if Clients[i].Account.Uid == t {
+	for i := 0; i < len(Msim_Clients); i++ {
+		if Msim_Clients[i].Account.Uid == t {
 			found = true
-			util.WriteTraffic(Clients[i].Connection, buildDataPacket([]msim_data_pair{
+			util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
 				msim_new_data_int("bm", 1),
-				msim_new_data_int("sesskey", Clients[i].Sessionkey),
+				msim_new_data_int("sesskey", Msim_Clients[i].Sessionkey),
 				msim_new_data_int("f", client.Account.Uid),
 				msim_new_data_string("msg", msg),
 			}))
@@ -209,7 +209,7 @@ func handleClientPacketBuddyInstantMessage(client *Msim_client, packet []byte) {
 }
 
 // persist 1;0;1 get_contact_information
-func handleClientPacketGetContactList(client *Msim_client, packet []byte) {
+func handleClientPacketGetContactList(client *Msim_Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
@@ -217,7 +217,7 @@ func handleClientPacketGetContactList(client *Msim_client, packet []byte) {
 	res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid=?", client.Account.Uid)
 	body := ""
 	for res.Next() {
-		var contact Contact
+		var contact Msim_Contact
 		_ = res.Scan(&contact.fromid, &contact.id, &contact.reason)
 		accountRow := getUserDataById(contact.id)
 		body += buildDataBody([]msim_data_pair{
@@ -250,7 +250,7 @@ func handleClientPacketGetContactList(client *Msim_client, packet []byte) {
 }
 
 // persist 1;0;2 get_contact_information
-func handleClientPacketGetContactInformation(client *Msim_client, packet []byte) {
+func handleClientPacketGetContactInformation(client *Msim_Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
@@ -285,7 +285,7 @@ func handleClientPacketGetContactInformation(client *Msim_client, packet []byte)
 }
 
 // Persist 1;1;4
-func handleClientPacketUserLookupIMAboutMyself(client *Msim_client, packet []byte) {
+func handleClientPacketUserLookupIMAboutMyself(client *Msim_Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
@@ -321,7 +321,7 @@ func handleClientPacketUserLookupIMAboutMyself(client *Msim_client, packet []byt
 }
 
 // Persist 1;1;17
-func handleClientPacketUserLookupIMByUid(client *Msim_client, packet []byte) {
+func handleClientPacketUserLookupIMByUid(client *Msim_Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
@@ -359,7 +359,7 @@ func handleClientPacketUserLookupIMByUid(client *Msim_client, packet []byte) {
 
 // persist 1;2;6
 // \persist\1\sesskey\7920\cmd\1\dsn\2\uid\1\lid\6\rid\8\body\\final\
-func handleClientPacketGetGroups(client *Msim_client, packet []byte) {
+func handleClientPacketGetGroups(client *Msim_Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
@@ -383,7 +383,7 @@ func handleClientPacketGetGroups(client *Msim_client, packet []byte) {
 }
 
 // Persist 1;4;3, 1;4;5
-func handleClientPacketUserLookupMySpaceByUid(client *Msim_client, packet []byte) {
+func handleClientPacketUserLookupMySpaceByUid(client *Msim_Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
@@ -415,7 +415,7 @@ func handleClientPacketUserLookupMySpaceByUid(client *Msim_client, packet []byte
 }
 
 // Persist 1;5;7
-func handleClientPacketUserLookupMySpaceByUsernameOrEmail(client *Msim_client, packet []byte) {
+func handleClientPacketUserLookupMySpaceByUsernameOrEmail(client *Msim_Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
