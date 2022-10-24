@@ -135,9 +135,21 @@ func handleClientPacketAddBuddy(client *Msim_client, packet []byte) {
 	check.Close()
 	if count > 0 {
 		util.Debug("buddy is already added")
+		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
+			msim_new_data_boolean("error", true),
+			msim_new_data_string("errmsg", "The profile requested is already a buddy."),
+			msim_new_data_int("err", 1539),
+		}))
 		return
 	}
 	dbres, _ := util.GetDatabaseHandle().Query("INSERT into contacts (`fromid`, `id`, `reason`) VALUES (?, ?, ?)", client.Account.Uid, newprofileid, reason)
+	dbres.Close()
+}
+
+// delbuddy message
+func handleClientPacketDelBuddy(client *Msim_client, packet []byte) {
+	delprofileid := findValueFromKey("delprofileid", packet)
+	dbres, _ := util.GetDatabaseHandle().Query("DELETE from contacts WHERE id=?", delprofileid)
 	dbres.Close()
 }
 
@@ -164,6 +176,7 @@ func handleClientOfflineEvents(client *Msim_client) {
 			msim_new_data_int64("date", msg.date),
 			msim_new_data_string("msg", msg.msg),
 		}))
+		util.Debug("%d", msg.date)
 	}
 	res.Close()
 	res2, _ := util.GetDatabaseHandle().Query("DELETE from offlinemessages WHERE toid= ?", client.Account.Uid)
@@ -213,7 +226,7 @@ func handleClientPacketGetContactList(client *Msim_client, packet []byte) {
 			msim_new_data_int("Position", 1),                //TODO
 			msim_new_data_string("GroupName", "IM Friends"), //TODO
 			msim_new_data_int("Visibility", 1),
-			msim_new_data_string("ShowAvatar", "True"),
+			msim_new_data_string("ShowAvatar", "true"),
 			msim_new_data_string("AvatarUrl", escapeString(accountRow.Avatar)),
 			msim_new_data_int("LastLogin", 128177889600000000), //TODO
 			msim_new_data_string("IMName", accountRow.Username),
@@ -260,8 +273,8 @@ func handleClientPacketGetContactInformation(client *Msim_client, packet []byte)
 			msim_new_data_string("Headline", "schneider"),    //TODO
 			msim_new_data_int("Position", 1),                 //TODO
 			msim_new_data_string("!GroupName", "IM Friends"), //TODO
-			msim_new_data_int("Visibility", 2),
-			msim_new_data_string("!ShowAvatar", "True"),
+			msim_new_data_int("Visibility", 1),
+			msim_new_data_string("!ShowAvatar", "true"),
 			msim_new_data_string("!AvatarUrl", escapeString(accountRow.Avatar)),
 			msim_new_data_int("!NameSelect", 0),
 			msim_new_data_string("IMName", accountRow.Username),
@@ -289,17 +302,17 @@ func handleClientPacketUserLookupIMAboutMyself(client *Msim_client, packet []byt
 		msim_new_data_string("rid", findValueFromKey("rid", packet)),
 		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
 			msim_new_data_int("UserID", accountRow.Uid),
-			msim_new_data_string("Sound", "True"),
+			msim_new_data_string("Sound", "true"),
 			msim_new_data_int("!PrivacyMode", 0),
 			msim_new_data_string("!ShowOnlyToList", "False"),
 			msim_new_data_int("!OfflineMessageMode", 2),
 			msim_new_data_string("Headline", "schneider"), //TODO
 			msim_new_data_string("Avatarurl", escapeString(accountRow.Avatar)),
 			msim_new_data_int("Alert", 1),
-			msim_new_data_string("!ShowAvatar", "True"),
+			msim_new_data_string("!ShowAvatar", "true"),
 			msim_new_data_string("IMName", accountRow.Screenname),
 			msim_new_data_int("!ClientVersion", 999),
-			msim_new_data_string("!AllowBrowse", "True"),
+			msim_new_data_string("!AllowBrowse", "true"),
 			msim_new_data_string("IMLang", "English"),
 			msim_new_data_int("LangID", 8192),
 		})),
@@ -326,17 +339,17 @@ func handleClientPacketUserLookupIMByUid(client *Msim_client, packet []byte) {
 		msim_new_data_string("rid", findValueFromKey("rid", packet)),
 		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
 			msim_new_data_int("UserID", accountRow.Uid),
-			msim_new_data_string("Sound", "True"),
+			msim_new_data_string("Sound", "true"),
 			msim_new_data_int("!PrivacyMode", 0),             // TODO
 			msim_new_data_string("!ShowOnlyToList", "False"), // TODO
 			msim_new_data_int("!OfflineMessageMode", 2),      // TODO
 			msim_new_data_string("Headline", "schneider"),    // TODO
 			msim_new_data_string("Avatarurl", escapeString(accountRow.Avatar)),
 			msim_new_data_int("Alert", 1),               //TODO
-			msim_new_data_string("!ShowAvatar", "True"), // TODO
+			msim_new_data_string("!ShowAvatar", "true"), // TODO
 			msim_new_data_string("IMName", accountRow.Screenname),
 			msim_new_data_int("!ClientVersion", 999),
-			msim_new_data_string("!AllowBrowse", "True"), // TODO
+			msim_new_data_string("!AllowBrowse", "true"), // TODO
 			msim_new_data_string("IMLang", "English"),
 			msim_new_data_int("LangID", 8192),
 		})),
