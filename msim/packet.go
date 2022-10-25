@@ -126,7 +126,7 @@ func handleClientPacketSetStatusMessages(client *Msim_Client, packet []byte) {
 // addbuddy message
 func handleClientPacketAddBuddy(client *Msim_Client, packet []byte) {
 	if findValueFromKey("newprofileid", packet) == "6221" {
-		util.Debug("dummy packet detected")
+		util.Debug("MySpace -> handleClientPacketAddBuddy", "MySpace Chatbot Friend Request Detected! Skipping...")
 		return
 	}
 	newprofileid := findValueFromKey("newprofileid", packet)
@@ -138,7 +138,7 @@ func handleClientPacketAddBuddy(client *Msim_Client, packet []byte) {
 	check.Scan(&count)
 	check.Close()
 	if count > 0 {
-		util.Debug("buddy is already added")
+		util.Debug("MySpace -> handleClientPacketAddBuddy", "Buddy is already added to Contact List! Returning Error...")
 		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 			msim_new_data_boolean("error", true),
 			msim_new_data_string("errmsg", "The profile requested is already a buddy."),
@@ -180,7 +180,7 @@ func handleClientOfflineEvents(client *Msim_Client) {
 			//	msim_new_data_int("date", msg.date),
 			msim_new_data_string("msg", msg.msg),
 		}))
-		//util.Debug("%d", msg.date)
+		util.Debug("MySpace -> handleClientOfflineEvents", "%d", msg.date)
 	}
 	res.Close()
 	res2, _ := util.GetDatabaseHandle().Query("DELETE from offlinemessages WHERE toid= ?", client.Account.Uid)
@@ -261,7 +261,7 @@ func handleClientPacketGetContactList(client *Msim_Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
-	util.Debug("get_contact_list")
+	util.Debug("MySpace -> handleClientPacketGetContactList", "Requested Contact List...")
 	res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid=?", client.Account.Uid)
 	body := ""
 	for res.Next() {
@@ -305,7 +305,7 @@ func handleClientPacketGetContactInformation(client *Msim_Client, packet []byte)
 
 	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
 
-	util.Debug("get_contact_information")
+	util.Debug("MySpace -> handleClientPacketGetContactInformation", "Requesting Contact Information...")
 	parse, _ := strconv.Atoi(parsedbody[1])
 
 	accountRow, _ := GetUserDataById(parse)
@@ -412,7 +412,7 @@ func handleClientPacketGetGroups(client *Msim_Client, packet []byte) {
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
 
-	util.Debug("get_contact_groups")
+	util.Debug("MySpace -> handleClientPacketGetGroups", "Requesting Contact Groups")
 	res := buildDataPacket([]msim_data_pair{
 		msim_new_data_boolean("persistr", true),
 		msim_new_data_int("uid", client.Account.Uid),

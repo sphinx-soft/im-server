@@ -125,7 +125,7 @@ func unEscapeString(data string) string {
 	return res
 }
 
-func ArrayRemove(s []*Msim_Client, i int) []*Msim_Client {
+func RemoveMsimClient(s []*Msim_Client, i int) []*Msim_Client {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
 }
