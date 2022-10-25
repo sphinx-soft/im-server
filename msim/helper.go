@@ -82,9 +82,9 @@ func GenerateSessionKey() int {
 	return rand.Intn(100000)
 }
 
-func getUserData(username string) (Msim_Account, bool) {
+func getUserData(username string) (msim_account, bool) {
 
-	var acc Msim_Account
+	var acc msim_account
 
 	row, err := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE username= ?", username)
 	if err != nil {
@@ -99,9 +99,9 @@ func getUserData(username string) (Msim_Account, bool) {
 	return acc, false
 }
 
-func GetUserDataById(userid int) (Msim_Account, bool) {
+func GetUserDataById(userid int) (msim_account, bool) {
 
-	var acc Msim_Account
+	var acc msim_account
 
 	row, err := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE id= ?", userid)
 	if err != nil {

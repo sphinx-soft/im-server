@@ -128,7 +128,7 @@ func HandleClients(client *Msim_Client) {
 		if Msim_Clients[i].Account.Uid != client.Account.Uid {
 			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid= ?", client.Account.Uid)
 			for res.Next() {
-				var msg Msim_Contact
+				var msg msim_contact
 				_ = res.Scan(&msg.fromid, &msg.id, &msg.reason)
 				if Msim_Clients[i].Account.Uid == msg.id {
 					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE fromid= ? AND id= ?", Msim_Clients[i].Account.Uid, client.Account.Uid)

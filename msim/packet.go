@@ -117,7 +117,7 @@ func handleClientPacketSetStatusMessages(client *Msim_Client, packet []byte) {
 		if Msim_Clients[i].Account.Uid != client.Account.Uid {
 			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid= ?", client.Account.Uid)
 			for res.Next() {
-				var msg Msim_Contact
+				var msg msim_contact
 				_ = res.Scan(&msg.fromid, &msg.id, &msg.reason)
 				if Msim_Clients[i].Account.Uid == msg.id {
 					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE fromid= ? AND id= ?", Msim_Clients[i].Account.Uid, client.Account.Uid)
@@ -217,7 +217,7 @@ func handleClientOfflineEvents(client *Msim_Client) {
 		if Msim_Clients[i].Account.Uid != client.Account.Uid {
 			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid= ?", client.Account.Uid)
 			for res.Next() {
-				var msg Msim_Contact
+				var msg msim_contact
 				_ = res.Scan(&msg.fromid, &msg.id, &msg.reason)
 				if Msim_Clients[i].Account.Uid == msg.id {
 					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE fromid= ? AND id= ?", Msim_Clients[i].Account.Uid, client.Account.Uid)
@@ -246,7 +246,7 @@ func handleClientOfflineEvents(client *Msim_Client) {
 	//offline messages
 	res, _ := util.GetDatabaseHandle().Query("SELECT * from offlinemessages WHERE toid= ?", client.Account.Uid)
 	for res.Next() {
-		var msg Msim_OfflineMessage
+		var msg msim_offlinemessage
 		_ = res.Scan(&msg.fromid, &msg.toid, &msg.date, &msg.msg)
 		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 			msim_new_data_int("bm", 1),
@@ -336,7 +336,7 @@ func handleClientPacketGetContactList(client *Msim_Client, packet []byte) {
 	res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid=?", client.Account.Uid)
 	body := ""
 	for res.Next() {
-		var contact Msim_Contact
+		var contact msim_contact
 		_ = res.Scan(&contact.fromid, &contact.id, &contact.reason)
 		accountRow, _ := GetUserDataById(contact.id)
 		body += buildDataBody([]msim_data_pair{

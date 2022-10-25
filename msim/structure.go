@@ -7,7 +7,7 @@ type msim_data_pair struct {
 	Value string
 }
 
-type Msim_Contact struct {
+type msim_contact struct {
 	fromid int
 	id     int
 	reason string
@@ -17,13 +17,13 @@ type Msim_Client struct {
 	Connection  net.Conn
 	Nonce       string
 	Sessionkey  int
-	Account     Msim_Account
+	Account     msim_account
 	StatusCode  string
 	StatusText  string
 	BuildNumber string
 }
 
-type Msim_Account struct {
+type msim_account struct {
 	Uid        int
 	Username   string
 	Password   string
@@ -39,7 +39,7 @@ type Msim_Account struct {
 	lastlogin  int64
 }
 
-type Msim_OfflineMessage struct {
+type msim_offlinemessage struct {
 	fromid int
 	toid   int
 	date   int
