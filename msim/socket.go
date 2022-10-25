@@ -45,6 +45,11 @@ func handleClientIncomingPersistPackets(client *Msim_Client, data []byte) {
 				handleClientPacketUserLookupMySpaceByUsernameOrEmail(client, data)
 			}
 		}
+		if strings.Contains(str, "\\cmd\\514") {
+			if strings.Contains(str, "\\dsn\\8") && strings.Contains(str, "\\lid\\13") {
+				handleClientPacketChangePicture(client, data)
+			}
+		}
 	}
 }
 
@@ -87,14 +92,15 @@ func HandleClients(client *Msim_Client) {
 
 	Msim_Clients = append(Msim_Clients, client)
 
-	global := util.Global_Client{
+	//unused for now
+	/*global := util.Global_Client{
 		Client:   "MySpace",
 		Build:    client.BuildNumber,
 		Protocol: "MSIMv?",
 		Username: client.Account.Screenname,
-		Friends:  69, //TODO
+		Friends:  69,
 	}
-	util.AddGlobalClient(&global)
+	util.AddGlobalClient(&global)*/
 
 	handleClientOfflineEvents(client)
 	for {
@@ -120,13 +126,30 @@ func HandleClients(client *Msim_Client) {
 	//notify all users that user logged out
 	for i := 0; i < len(Msim_Clients); i++ {
 		if Msim_Clients[i].Account.Uid != client.Account.Uid {
-			util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
-				msim_new_data_int("bm", 100),
-				msim_new_data_int("f", client.Account.Uid),
-				msim_new_data_string("msg", "|s|0|ss|"+client.StatusText),
-			}))
+			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid= ?", client.Account.Uid)
+			for res.Next() {
+				var msg Msim_Contact
+				_ = res.Scan(&msg.fromid, &msg.id, &msg.reason)
+				if Msim_Clients[i].Account.Uid == msg.id {
+					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE fromid= ? AND id= ?", Msim_Clients[i].Account.Uid, client.Account.Uid)
+					res2.Next()
+					var count int
+					res2.Scan(&count)
+					res2.Close()
+					if count > 0 {
+						util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
+							msim_new_data_int("bm", 100),
+							msim_new_data_int("f", client.Account.Uid),
+							msim_new_data_string("msg", "|s|0|ss|"+client.StatusText),
+						}))
+					}
+
+				}
+			}
+			res.Close()
 		}
 	}
+
 	for i := 0; i < len(Msim_Clients); i++ {
 		if Msim_Clients[i].Account.Username == client.Account.Username {
 			util.Debug("MySpace -> HandleClients", "Removing from clients from List...")

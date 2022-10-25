@@ -82,35 +82,48 @@ func GenerateSessionKey() int {
 	return rand.Intn(100000)
 }
 
-func getUserData(username string) Msim_Account {
+func getUserData(username string) (Msim_Account, bool) {
 
 	var acc Msim_Account
 
-	row, _ := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE username= ?", username)
+	row, err := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE username= ?", username)
+	if err != nil {
+		util.Error(err.Error())
+		return acc, true
+	}
 	row.Next()
-	row.Scan(&acc.Uid, &acc.Username, &acc.Password, &acc.Screenname, &acc.Avatar,
-		&acc.BandName, &acc.SongName, &acc.Age, &acc.Gender, &acc.Location)
+	row.Scan(&acc.Uid, &acc.Username, &acc.Password, &acc.Screenname, &acc.Avatar, &acc.avatartype,
+		&acc.BandName, &acc.SongName, &acc.Age, &acc.Gender, &acc.Location, &acc.headline, &acc.lastlogin)
 	row.Close()
 
-	return acc
+	return acc, false
 }
 
-func getUserDataById(userid int) Msim_Account {
+func GetUserDataById(userid int) (Msim_Account, bool) {
 
 	var acc Msim_Account
 
-	row, _ := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE id= ?", userid)
+	row, err := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE id= ?", userid)
+	if err != nil {
+		util.Error(err.Error())
+		return acc, true
+	}
 	row.Next()
-	row.Scan(&acc.Uid, &acc.Username, &acc.Password, &acc.Screenname, &acc.Avatar,
-		&acc.BandName, &acc.SongName, &acc.Age, &acc.Gender, &acc.Location)
+	row.Scan(&acc.Uid, &acc.Username, &acc.Password, &acc.Screenname, &acc.Avatar, &acc.avatartype,
+		&acc.BandName, &acc.SongName, &acc.Age, &acc.Gender, &acc.Location, &acc.headline, &acc.lastlogin)
 	row.Close()
 
-	return acc
+	return acc, false
 }
 
 func escapeString(data string) string {
 	res := strings.Replace(data, "/", "/1", -1)
 	res = strings.Replace(res, "\\", "\\2", -1)
+	return res
+}
+func unEscapeString(data string) string {
+	res := strings.Replace(data, "/1", "/", -1)
+	res = strings.Replace(res, "\\2", "\\", -1)
 	return res
 }
 
