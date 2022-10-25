@@ -42,7 +42,6 @@ func handleClientAuthentication(client *Msim_Client) bool {
 	version := findValueFromKey("clientver", loginpacket)
 
 	acc, _ := getUserData(username)
-	util.Debug(acc.BandName)
 	client.Account = acc
 	uid := acc.Uid
 	sessionkey := GenerateSessionKey()
@@ -223,7 +222,6 @@ func handleClientPacketChangePicture(client *Msim_Client, packet []byte) {
 	body := strings.Split(strings.Replace(findValueFromKey("body", packet), "\x1c", "", -1), "=")
 	part, err := base64.StdEncoding.DecodeString(unEscapeString(body[len(body)-1]))
 	if err != nil {
-		util.Debug("Unkown profile picture upload error.")
 		return
 	}
 	buf = append(buf, part...)
@@ -232,13 +230,10 @@ func handleClientPacketChangePicture(client *Msim_Client, packet []byte) {
 		var pfpType string
 		if strings.HasPrefix(string(buf), "GIF") {
 			pfpType = "gif"
-			util.Debug("Type is gif")
 		} else if strings.Contains(string(buf), "PNG") {
 			pfpType = "png"
-			util.Debug("Type is png")
 		} else {
 			pfpType = "jpeg"
-			util.Debug("type is jpeg")
 		}
 		res, _ := util.GetDatabaseHandle().Query("UPDATE accounts SET avatar= ?, avatartype= ? WHERE id= ?", base64.StdEncoding.EncodeToString(buf), pfpType, client.Account.Uid)
 		res.Close()
