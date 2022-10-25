@@ -45,7 +45,7 @@ func handleClientIncomingPersistPackets(client *Msim_Client, data []byte) {
 				handleClientPacketUserLookupMySpaceByUsernameOrEmail(client, data)
 			}
 		}
-		if strings.Contains(str, "\\cmd\\514") {
+		if strings.Contains(str, "\\cmd\\514") || strings.Contains(str, "\\cmd\\2") {
 			if strings.Contains(str, "\\dsn\\8") && strings.Contains(str, "\\lid\\13") {
 				handleClientPacketChangePicture(client, data)
 			}

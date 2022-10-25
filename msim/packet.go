@@ -289,7 +289,7 @@ func handleClientPacketBuddyInstantMessage(client *Msim_Client, packet []byte) {
 
 var buf []byte
 
-// persist 514;8;13 change_profile_picture
+// persist 514;8;13 2;8;13 change_profile_picture
 func handleClientPacketChangePicture(client *Msim_Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
