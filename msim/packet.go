@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+var pfproot string = "http://127.0.0.1:80"
+
 /*
 	msim_not_a_packet   = -2       	-> garbage
 	msim_unknown_packet = -1       	-> unknown packet
@@ -270,7 +272,7 @@ func handleClientPacketGetContactList(client *Msim_Client, packet []byte) {
 			msim_new_data_string("GroupName", "IM Friends"), //TODO
 			msim_new_data_int("Visibility", 1),
 			msim_new_data_string("ShowAvatar", "true"),
-			msim_new_data_string("AvatarUrl", escapeString("http://127.0.0.1:80/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
+			msim_new_data_string("AvatarUrl", escapeString(pfproot+"/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
 			msim_new_data_int64("LastLogin", accountRow.lastlogin),
 			msim_new_data_string("IMName", accountRow.Username),
 			msim_new_data_string("NickName", accountRow.Screenname),
@@ -318,7 +320,7 @@ func handleClientPacketGetContactInformation(client *Msim_Client, packet []byte)
 			msim_new_data_string("!GroupName", "IM Friends"), //TODO
 			msim_new_data_int("Visibility", 1),
 			msim_new_data_string("!ShowAvatar", "true"),
-			msim_new_data_string("!AvatarUrl", escapeString("http://127.0.0.1:80/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
+			msim_new_data_string("!AvatarUrl", escapeString(pfproot+"/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
 			msim_new_data_int("!NameSelect", 0),
 			msim_new_data_string("IMName", accountRow.Username),
 			msim_new_data_string("!NickName", accountRow.Screenname),
@@ -350,7 +352,7 @@ func handleClientPacketUserLookupIMAboutMyself(client *Msim_Client, packet []byt
 			msim_new_data_string("!ShowOnlyToList", "False"),
 			msim_new_data_int("!OfflineMessageMode", 2),
 			msim_new_data_string("Headline", accountRow.headline),
-			msim_new_data_string("Avatarurl", escapeString("http://127.0.0.1:80/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
+			msim_new_data_string("Avatarurl", escapeString(pfproot+"/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
 			msim_new_data_int("Alert", 1),
 			msim_new_data_string("!ShowAvatar", "true"),
 			msim_new_data_string("IMName", accountRow.Screenname),
@@ -387,7 +389,7 @@ func handleClientPacketUserLookupIMByUid(client *Msim_Client, packet []byte) {
 			msim_new_data_string("!ShowOnlyToList", "False"), // TODO
 			msim_new_data_int("!OfflineMessageMode", 2),      // TODO
 			msim_new_data_string("Headline", accountRow.headline),
-			msim_new_data_string("Avatarurl", escapeString("http://127.0.0.1:80/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
+			msim_new_data_string("Avatarurl", escapeString(pfproot+"/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
 			msim_new_data_int("Alert", 1),               //TODO
 			msim_new_data_string("!ShowAvatar", "true"), // TODO
 			msim_new_data_string("IMName", accountRow.Screenname),
@@ -444,7 +446,7 @@ func handleClientPacketUserLookupMySpaceByUid(client *Msim_Client, packet []byte
 		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
 			msim_new_data_string("UserName", accountRow.Username),
 			msim_new_data_int("UserID", accountRow.Uid),
-			msim_new_data_string("ImageURL", escapeString("http://127.0.0.1:80/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
+			msim_new_data_string("ImageURL", escapeString(pfproot+"/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
 			msim_new_data_string("DisplayName", accountRow.Screenname),
 			msim_new_data_string("BandName", accountRow.BandName),
 			msim_new_data_string("SongName", accountRow.SongName),
@@ -475,7 +477,7 @@ func handleClientPacketUserLookupMySpaceByUsernameOrEmail(client *Msim_Client, p
 		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
 			msim_new_data_string(parsedbody[0], parsedbody[1]),
 			msim_new_data_int("UserID", accountRow.Uid),
-			msim_new_data_string("ImageURL", escapeString("http://127.0.0.1:80/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
+			msim_new_data_string("ImageURL", escapeString(pfproot+"/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
 			msim_new_data_string("DisplayName", accountRow.Screenname),
 			msim_new_data_string("BandName", accountRow.BandName),
 			msim_new_data_string("SongName", accountRow.SongName),
