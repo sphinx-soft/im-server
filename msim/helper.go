@@ -27,7 +27,7 @@ func msim_new_data_boolean(key string, value bool) msim_data_pair {
 	if value {
 		return msim_data_pair{Key: key, Value: "1"}
 	} else {
-		return msim_data_pair{Key: key, Value: "1"}
+		return msim_data_pair{Key: key, Value: ""}
 	}
 }
 
@@ -50,7 +50,9 @@ func buildDataPacket(datapairs []msim_data_pair) string {
 	final := ""
 	for i := 0; i < len(datapairs); i++ {
 		final += "\\" + datapairs[i].Key
-		final += "\\" + datapairs[i].Value
+		if datapairs[i].Value != "" {
+			final += "\\" + datapairs[i].Value
+		}
 	}
 	final += "\\final\\"
 	return final

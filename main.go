@@ -36,6 +36,7 @@ func port1863Handler() {
 		if msnp_client {
 			Msnp := msnp.Msnp_Client{
 				Connection: tcpClient,
+				Dispatched: false,
 			}
 
 			go msnp.HandleDispatch(&Msnp, string(data))
@@ -62,9 +63,9 @@ func main() {
 	util.Log("Handler", "Launched Handler for Port 1863")
 	go port1863Handler()
 
-	util.Log("Handler", "Launched Handler for HTTP Server")
-	go http.RunWebServer(80)
-
 	util.Log("Handler", "Launched Handler for MSNP Notification")
-	msnp.HandleNotification()
+	go msnp.HandleNotification()
+
+	util.Log("Handler", "Launched Handler for HTTP Server")
+	http.RunWebServer(80)
 }
