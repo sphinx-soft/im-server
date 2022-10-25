@@ -150,7 +150,7 @@ func handleClientPacketAddBuddy(client *Msim_Client, packet []byte) {
 	reason := findValueFromKey("reason", packet)
 
 	var count int
-	check, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE id=?", newprofileid)
+	check, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE id=? and fromid= ?", newprofileid, client.Account.Uid)
 	check.Next()
 	check.Scan(&count)
 	check.Close()
@@ -166,13 +166,50 @@ func handleClientPacketAddBuddy(client *Msim_Client, packet []byte) {
 	util.Debug("addbuddy", "%d:%d", client.Account.Uid, newprofileid)
 	dbres, _ := util.GetDatabaseHandle().Query("INSERT into contacts (`fromid`, `id`, `reason`) VALUES (?, ?, ?)", client.Account.Uid, newprofileid, reason)
 	dbres.Close()
+	var count2 int
+	check2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE fromid=? and id= ?", newprofileid, client.Account.Uid)
+	check2.Next()
+	check2.Scan(&count2)
+	check2.Close()
+	if count2 > 0 {
+		for i := 0; i < len(Msim_Clients); i++ {
+			if strconv.Itoa(Msim_Clients[i].Account.Uid) == newprofileid {
+				util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
+					msim_new_data_int("bm", 100),
+					msim_new_data_int("f", Msim_Clients[i].Account.Uid),
+					msim_new_data_string("msg", "|s|"+Msim_Clients[i].StatusCode+"|ss|"+Msim_Clients[i].StatusText),
+				}))
+				util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
+					msim_new_data_int("bm", 100),
+					msim_new_data_int("f", client.Account.Uid),
+					msim_new_data_string("msg", "|s|"+client.StatusCode+"|ss|"+client.StatusText),
+				}))
+			}
+		}
+	}
 }
 
 // delbuddy message
 func handleClientPacketDelBuddy(client *Msim_Client, packet []byte) {
 	delprofileid := findValueFromKey("delprofileid", packet)
-	dbres, _ := util.GetDatabaseHandle().Query("DELETE from contacts WHERE id=?", delprofileid)
+	dbres, _ := util.GetDatabaseHandle().Query("DELETE from contacts WHERE id=? and fromid= ?", delprofileid, client.Account.Uid)
 	dbres.Close()
+	for i := 0; i < len(Msim_Clients); i++ {
+		if strconv.Itoa(Msim_Clients[i].Account.Uid) == delprofileid {
+			var count int
+			dbres, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE id=? and fromid= ?", client.Account.Uid, delprofileid)
+			dbres.Next()
+			dbres.Scan(&count)
+			dbres.Close()
+			if count > 0 {
+				util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
+					msim_new_data_int("bm", 100),
+					msim_new_data_int("f", client.Account.Uid),
+					msim_new_data_string("msg", "|s|0|ss|Offline"),
+				}))
+			}
+		}
+	}
 }
 
 func handleClientOfflineEvents(client *Msim_Client) {
