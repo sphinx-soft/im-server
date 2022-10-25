@@ -5,11 +5,11 @@ import "net"
 type Msnp_Client struct {
 	Connection  net.Conn
 	Dispatched  bool
-	Account     Msnp_Account
+	Account     msnp_account
 	BuildNumber string
 }
 
-type Msnp_Account struct {
+type msnp_account struct {
 	Uid        int
 	Email      string
 	Password   string

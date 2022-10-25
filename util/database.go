@@ -2,6 +2,7 @@ package util
 
 import (
 	"database/sql"
+	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -9,7 +10,7 @@ import (
 var db *sql.DB
 
 func InitDatabase() {
-	database, err := sql.Open("mysql", "{login-here}@tcp(127.0.0.1:3306)/phantom")
+	database, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/phantom", GetDatabaseLogin()))
 	db = database
 	if err != nil {
 		panic(err)

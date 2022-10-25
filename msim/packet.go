@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var pfproot string = "http://mms.phantom-im.xyz"
+var pfproot string = util.GetRootUrl()
 
 /*
 	msim_not_a_packet   = -2       	-> garbage

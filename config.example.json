@@ -1,0 +1,4 @@
+{
+    "root":"your host here (either localhost or remote url)",
+    "dblogin":"username:password"
+}
