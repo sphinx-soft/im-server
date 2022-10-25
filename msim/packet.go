@@ -115,11 +115,19 @@ func handleClientPacketSetStatusMessages(client *Msim_Client, packet []byte) {
 	res.Close()
 	for i := 0; i < len(Msim_Clients); i++ {
 		if Msim_Clients[i].Account.Uid != client.Account.Uid {
-			util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
-				msim_new_data_int("bm", 100),
-				msim_new_data_int("f", client.Account.Uid),
-				msim_new_data_string("msg", "|s|"+status+"|ss|"+statstring+""),
-			}))
+			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid= ?", client.Account.Uid)
+			for res.Next() {
+				var msg Msim_Contact
+				_ = res.Scan(&msg.fromid, &msg.id, &msg.reason)
+				if Msim_Clients[i].Account.Uid == msg.id {
+					util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
+						msim_new_data_int("bm", 100),
+						msim_new_data_int("f", client.Account.Uid),
+						msim_new_data_string("msg", "|s|"+status+"|ss|"+statstring+""),
+					}))
+				}
+			}
+			res.Close()
 		}
 	}
 }
@@ -147,6 +155,7 @@ func handleClientPacketAddBuddy(client *Msim_Client, packet []byte) {
 		}))
 		return
 	}
+	util.Debug("addbuddy", "%d:%d", client.Account.Uid, newprofileid)
 	dbres, _ := util.GetDatabaseHandle().Query("INSERT into contacts (`fromid`, `id`, `reason`) VALUES (?, ?, ?)", client.Account.Uid, newprofileid, reason)
 	dbres.Close()
 }
@@ -161,11 +170,24 @@ func handleClientPacketDelBuddy(client *Msim_Client, packet []byte) {
 func handleClientOfflineEvents(client *Msim_Client) {
 	for i := 0; i < len(Msim_Clients); i++ {
 		if Msim_Clients[i].Account.Uid != client.Account.Uid {
-			util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
-				msim_new_data_int("bm", 100),
-				msim_new_data_int("f", Msim_Clients[i].Account.Uid),
-				msim_new_data_string("msg", "|s|"+Msim_Clients[i].StatusCode+"|ss|"+Msim_Clients[i].StatusText),
-			}))
+			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid= ?", client.Account.Uid)
+			for res.Next() {
+				var msg Msim_Contact
+				_ = res.Scan(&msg.fromid, &msg.id, &msg.reason)
+				if Msim_Clients[i].Account.Uid == msg.id {
+					util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
+						msim_new_data_int("bm", 100),
+						msim_new_data_int("f", client.Account.Uid),
+						msim_new_data_string("msg", "|s|"+client.StatusCode+"|ss|"+client.StatusText),
+					}))
+					util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
+						msim_new_data_int("bm", 100),
+						msim_new_data_int("f", Msim_Clients[i].Account.Uid),
+						msim_new_data_string("msg", "|s|"+Msim_Clients[i].StatusCode+"|ss|"+Msim_Clients[i].StatusText),
+					}))
+				}
+			}
+			res.Close()
 		}
 	}
 
