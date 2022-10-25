@@ -8,6 +8,7 @@ import (
 
 func RunWebServer(port int) {
 	http.HandleFunc("/api", HandleAPI)
+	http.HandleFunc("/pfp/", HandlePFP)
 	http.HandleFunc("/html.ng/", CycleMySpaceAds)
 	http.HandleFunc("/adopt/", CycleMySpaceAds)
 	util.Log("HTTP Listener", "Listening on 0.0.0.0:%d", port)

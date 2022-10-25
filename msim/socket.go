@@ -45,6 +45,11 @@ func handleClientIncomingPersistPackets(client *Msim_Client, data []byte) {
 				handleClientPacketUserLookupMySpaceByUsernameOrEmail(client, data)
 			}
 		}
+		if strings.Contains(str, "\\cmd\\514") {
+			if strings.Contains(str, "\\dsn\\8") && strings.Contains(str, "\\lid\\13") {
+				handleClientPacketChangePicture(client, data)
+			}
+		}
 	}
 }
 
@@ -87,14 +92,15 @@ func HandleClients(client *Msim_Client) {
 
 	Msim_Clients = append(Msim_Clients, client)
 
-	global := util.Global_Client{
+	//unused for now
+	/*global := util.Global_Client{
 		Client:   "MySpace",
 		Build:    client.BuildNumber,
 		Protocol: "MSIMv?",
 		Username: client.Account.Screenname,
-		Friends:  69, //TODO
+		Friends:  69,
 	}
-	util.AddGlobalClient(&global)
+	util.AddGlobalClient(&global)*/
 
 	handleClientOfflineEvents(client)
 	for {

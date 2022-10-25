@@ -41,7 +41,8 @@ func handleClientAuthentication(client *Msim_Client) bool {
 	username := findValueFromKey("username", loginpacket)
 	version := findValueFromKey("clientver", loginpacket)
 
-	acc := getUserData(username)
+	acc, _ := getUserData(username)
+	util.Debug(acc.BandName)
 	client.Account = acc
 	uid := acc.Uid
 	sessionkey := GenerateSessionKey()
@@ -77,6 +78,8 @@ func handleClientAuthentication(client *Msim_Client) bool {
 	rc4data := util.DecryptRC4(byte_rc4_key, byte_rc4_data)
 
 	if strings.Contains(string(rc4data), username) {
+		res, _ := util.GetDatabaseHandle().Query("UPDATE accounts SET lastlogin = ? WHERE id= ?", time.Now().UnixNano(), acc.Uid)
+		res.Close()
 		util.Log("MySpaceIM", "Client Authenticated! | Username: %s | Screenname: %s | Version: 1.0.%s.0", username, screenname, version)
 		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 			msim_new_data_string("lc", "2"),
@@ -107,7 +110,8 @@ func handleClientPacketSetStatusMessages(client *Msim_Client, packet []byte) {
 
 	client.StatusCode = status
 	client.StatusText = statstring
-
+	res, _ := util.GetDatabaseHandle().Query("UPDATE accounts SET headline= ? WHERE id= ?", statstring, client.Account.Uid)
+	res.Close()
 	for i := 0; i < len(Msim_Clients); i++ {
 		if Msim_Clients[i].Account.Uid != client.Account.Uid {
 			util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
@@ -173,10 +177,10 @@ func handleClientOfflineEvents(client *Msim_Client) {
 			msim_new_data_int("bm", 1),
 			msim_new_data_int("sesskey", client.Sessionkey),
 			msim_new_data_int("f", msg.fromid),
-			msim_new_data_int64("date", msg.date),
+			//	msim_new_data_int("date", msg.date),
 			msim_new_data_string("msg", msg.msg),
 		}))
-		util.Debug("%d", msg.date)
+		//util.Debug("%d", msg.date)
 	}
 	res.Close()
 	res2, _ := util.GetDatabaseHandle().Query("DELETE from offlinemessages WHERE toid= ?", client.Account.Uid)
@@ -187,7 +191,7 @@ func handleClientOfflineEvents(client *Msim_Client) {
 func handleClientPacketBuddyInstantMessage(client *Msim_Client, packet []byte) {
 	t, _ := strconv.Atoi(findValueFromKey("t", packet))
 	msg := findValueFromKey("msg", packet)
-	date := time.Now().UTC().UnixNano()
+	date := time.Now().UTC().UnixMilli()
 	found := false
 	for i := 0; i < len(Msim_Clients); i++ {
 		if Msim_Clients[i].Account.Uid == t {
@@ -208,6 +212,50 @@ func handleClientPacketBuddyInstantMessage(client *Msim_Client, packet []byte) {
 	}
 }
 
+var buf []byte
+
+// persist 514;8;13 change_profile_picture
+func handleClientPacketChangePicture(client *Msim_Client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+
+	body := strings.Split(strings.Replace(findValueFromKey("body", packet), "\x1c", "", -1), "=")
+	part, err := base64.StdEncoding.DecodeString(unEscapeString(body[len(body)-1]))
+	if err != nil {
+		util.Debug("Unkown profile picture upload error.")
+		return
+	}
+	buf = append(buf, part...)
+
+	if strings.Contains(findValueFromKey("body", packet), "True") {
+		var pfpType string
+		if strings.HasPrefix(string(buf), "GIF") {
+			pfpType = "gif"
+			util.Debug("Type is gif")
+		} else if strings.Contains(string(buf), "PNG") {
+			pfpType = "png"
+			util.Debug("Type is png")
+		} else {
+			pfpType = "jpeg"
+			util.Debug("type is jpeg")
+		}
+		res, _ := util.GetDatabaseHandle().Query("UPDATE accounts SET avatar= ?, avatartype= ? WHERE id= ?", base64.StdEncoding.EncodeToString(buf), pfpType, client.Account.Uid)
+		res.Close()
+		buf = nil
+	}
+
+	util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.Uid),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", ""),
+	}))
+}
+
 // persist 1;0;1 get_contact_information
 func handleClientPacketGetContactList(client *Msim_Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
@@ -219,16 +267,16 @@ func handleClientPacketGetContactList(client *Msim_Client, packet []byte) {
 	for res.Next() {
 		var contact Msim_Contact
 		_ = res.Scan(&contact.fromid, &contact.id, &contact.reason)
-		accountRow := getUserDataById(contact.id)
+		accountRow, _ := GetUserDataById(contact.id)
 		body += buildDataBody([]msim_data_pair{
 			msim_new_data_int("ContactID", accountRow.Uid),
-			msim_new_data_string("Headline", "schneider"),   //TODO
+			msim_new_data_string("Headline", accountRow.headline),
 			msim_new_data_int("Position", 1),                //TODO
 			msim_new_data_string("GroupName", "IM Friends"), //TODO
 			msim_new_data_int("Visibility", 1),
 			msim_new_data_string("ShowAvatar", "true"),
-			msim_new_data_string("AvatarUrl", escapeString(accountRow.Avatar)),
-			msim_new_data_int("LastLogin", 128177889600000000), //TODO
+			msim_new_data_string("AvatarUrl", escapeString("http://127.0.0.1:80/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
+			msim_new_data_int64("LastLogin", accountRow.lastlogin),
 			msim_new_data_string("IMName", accountRow.Username),
 			msim_new_data_string("NickName", accountRow.Screenname),
 			msim_new_data_int("NameSelect", 0),
@@ -260,7 +308,7 @@ func handleClientPacketGetContactInformation(client *Msim_Client, packet []byte)
 	util.Debug("get_contact_information")
 	parse, _ := strconv.Atoi(parsedbody[1])
 
-	accountRow := getUserDataById(parse)
+	accountRow, _ := GetUserDataById(parse)
 	res := buildDataPacket([]msim_data_pair{
 		msim_new_data_boolean("persistr", true),
 		msim_new_data_int("uid", client.Account.Uid),
@@ -270,12 +318,12 @@ func handleClientPacketGetContactInformation(client *Msim_Client, packet []byte)
 		msim_new_data_string("rid", findValueFromKey("rid", packet)),
 		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
 			msim_new_data_int("ContactID", accountRow.Uid),
-			msim_new_data_string("Headline", "schneider"),    //TODO
+			msim_new_data_string("Headline", accountRow.headline),
 			msim_new_data_int("Position", 1),                 //TODO
 			msim_new_data_string("!GroupName", "IM Friends"), //TODO
 			msim_new_data_int("Visibility", 1),
 			msim_new_data_string("!ShowAvatar", "true"),
-			msim_new_data_string("!AvatarUrl", escapeString(accountRow.Avatar)),
+			msim_new_data_string("!AvatarUrl", escapeString("http://127.0.0.1:80/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
 			msim_new_data_int("!NameSelect", 0),
 			msim_new_data_string("IMName", accountRow.Username),
 			msim_new_data_string("!NickName", accountRow.Screenname),
@@ -292,7 +340,7 @@ func handleClientPacketUserLookupIMAboutMyself(client *Msim_Client, packet []byt
 
 	parse := client.Account.Uid
 
-	accountRow := getUserDataById(parse)
+	accountRow, _ := GetUserDataById(parse)
 	res := buildDataPacket([]msim_data_pair{
 		msim_new_data_boolean("persistr", true),
 		msim_new_data_int("uid", client.Account.Uid),
@@ -306,8 +354,8 @@ func handleClientPacketUserLookupIMAboutMyself(client *Msim_Client, packet []byt
 			msim_new_data_int("!PrivacyMode", 0),
 			msim_new_data_string("!ShowOnlyToList", "False"),
 			msim_new_data_int("!OfflineMessageMode", 2),
-			msim_new_data_string("Headline", "schneider"), //TODO
-			msim_new_data_string("Avatarurl", escapeString(accountRow.Avatar)),
+			msim_new_data_string("Headline", accountRow.headline),
+			msim_new_data_string("Avatarurl", escapeString("http://127.0.0.1:80/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
 			msim_new_data_int("Alert", 1),
 			msim_new_data_string("!ShowAvatar", "true"),
 			msim_new_data_string("IMName", accountRow.Screenname),
@@ -329,7 +377,7 @@ func handleClientPacketUserLookupIMByUid(client *Msim_Client, packet []byte) {
 	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
 	parse, _ := strconv.Atoi(parsedbody[1])
 
-	accountRow := getUserDataById(parse)
+	accountRow, _ := GetUserDataById(parse)
 	res := buildDataPacket([]msim_data_pair{
 		msim_new_data_boolean("persistr", true),
 		msim_new_data_int("uid", client.Account.Uid),
@@ -343,8 +391,8 @@ func handleClientPacketUserLookupIMByUid(client *Msim_Client, packet []byte) {
 			msim_new_data_int("!PrivacyMode", 0),             // TODO
 			msim_new_data_string("!ShowOnlyToList", "False"), // TODO
 			msim_new_data_int("!OfflineMessageMode", 2),      // TODO
-			msim_new_data_string("Headline", "schneider"),    // TODO
-			msim_new_data_string("Avatarurl", escapeString(accountRow.Avatar)),
+			msim_new_data_string("Headline", accountRow.headline),
+			msim_new_data_string("Avatarurl", escapeString("http://127.0.0.1:80/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
 			msim_new_data_int("Alert", 1),               //TODO
 			msim_new_data_string("!ShowAvatar", "true"), // TODO
 			msim_new_data_string("IMName", accountRow.Screenname),
@@ -390,7 +438,7 @@ func handleClientPacketUserLookupMySpaceByUid(client *Msim_Client, packet []byte
 	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
 
 	parse, _ := strconv.Atoi(parsedbody[1])
-	accountRow := getUserDataById(parse)
+	accountRow, _ := GetUserDataById(parse)
 	res := buildDataPacket([]msim_data_pair{
 		msim_new_data_boolean("persistr", true),
 		msim_new_data_int("uid", client.Account.Uid),
@@ -401,7 +449,7 @@ func handleClientPacketUserLookupMySpaceByUid(client *Msim_Client, packet []byte
 		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
 			msim_new_data_string("UserName", accountRow.Username),
 			msim_new_data_int("UserID", accountRow.Uid),
-			msim_new_data_string("ImageURL", escapeString(accountRow.Avatar)),
+			msim_new_data_string("ImageURL", escapeString("http://127.0.0.1:80/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
 			msim_new_data_string("DisplayName", accountRow.Screenname),
 			msim_new_data_string("BandName", accountRow.BandName),
 			msim_new_data_string("SongName", accountRow.SongName),
@@ -421,7 +469,7 @@ func handleClientPacketUserLookupMySpaceByUsernameOrEmail(client *Msim_Client, p
 	lid := findValueFromKey("lid", packet)
 
 	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
-	accountRow := getUserData(parsedbody[1])
+	accountRow, _ := getUserData(parsedbody[1])
 	res := buildDataPacket([]msim_data_pair{
 		msim_new_data_boolean("persistr", true),
 		msim_new_data_int("uid", client.Account.Uid),
@@ -432,7 +480,7 @@ func handleClientPacketUserLookupMySpaceByUsernameOrEmail(client *Msim_Client, p
 		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
 			msim_new_data_string(parsedbody[0], parsedbody[1]),
 			msim_new_data_int("UserID", accountRow.Uid),
-			msim_new_data_string("ImageURL", escapeString(accountRow.Avatar)),
+			msim_new_data_string("ImageURL", escapeString("http://127.0.0.1:80/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
 			msim_new_data_string("DisplayName", accountRow.Screenname),
 			msim_new_data_string("BandName", accountRow.BandName),
 			msim_new_data_string("SongName", accountRow.SongName),

@@ -27,17 +27,20 @@ type Msim_Account struct {
 	Password   string
 	Screenname string
 	Avatar     string
+	avatartype string
 	BandName   string
 	SongName   string
 	Age        string
 	Gender     string
 	Location   string
+	headline   string
+	lastlogin  int64
 }
 
 type Msim_OfflineMessage struct {
 	fromid int
 	toid   int
-	date   int64
+	date   int
 	msg    string
 }
 
