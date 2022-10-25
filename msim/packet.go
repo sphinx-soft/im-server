@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var pfproot string = "http://127.0.0.1:80"
+var pfproot string = "http://mms.phantom-im.xyz"
 
 /*
 	msim_not_a_packet   = -2       	-> garbage
@@ -120,11 +120,19 @@ func handleClientPacketSetStatusMessages(client *Msim_Client, packet []byte) {
 				var msg Msim_Contact
 				_ = res.Scan(&msg.fromid, &msg.id, &msg.reason)
 				if Msim_Clients[i].Account.Uid == msg.id {
-					util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
-						msim_new_data_int("bm", 100),
-						msim_new_data_int("f", client.Account.Uid),
-						msim_new_data_string("msg", "|s|"+status+"|ss|"+statstring+""),
-					}))
+					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE fromid= ? AND id= ?", Msim_Clients[i].Account.Uid, client.Account.Uid)
+					res2.Next()
+					var count int
+					res2.Scan(&count)
+					res2.Close()
+					if count > 0 {
+						util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
+							msim_new_data_int("bm", 100),
+							msim_new_data_int("f", client.Account.Uid),
+							msim_new_data_string("msg", "|s|"+status+"|ss|"+statstring+""),
+						}))
+					}
+
 				}
 			}
 			res.Close()
@@ -175,16 +183,23 @@ func handleClientOfflineEvents(client *Msim_Client) {
 				var msg Msim_Contact
 				_ = res.Scan(&msg.fromid, &msg.id, &msg.reason)
 				if Msim_Clients[i].Account.Uid == msg.id {
-					util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
-						msim_new_data_int("bm", 100),
-						msim_new_data_int("f", client.Account.Uid),
-						msim_new_data_string("msg", "|s|"+client.StatusCode+"|ss|"+client.StatusText),
-					}))
-					util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
-						msim_new_data_int("bm", 100),
-						msim_new_data_int("f", Msim_Clients[i].Account.Uid),
-						msim_new_data_string("msg", "|s|"+Msim_Clients[i].StatusCode+"|ss|"+Msim_Clients[i].StatusText),
-					}))
+					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE fromid= ? AND id= ?", Msim_Clients[i].Account.Uid, client.Account.Uid)
+					res2.Next()
+					var count int
+					res2.Scan(&count)
+					res2.Close()
+					if count > 0 {
+						util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
+							msim_new_data_int("bm", 100),
+							msim_new_data_int("f", client.Account.Uid),
+							msim_new_data_string("msg", "|s|"+client.StatusCode+"|ss|"+client.StatusText),
+						}))
+						util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
+							msim_new_data_int("bm", 100),
+							msim_new_data_int("f", Msim_Clients[i].Account.Uid),
+							msim_new_data_string("msg", "|s|"+Msim_Clients[i].StatusCode+"|ss|"+Msim_Clients[i].StatusText),
+						}))
+					}
 				}
 			}
 			res.Close()
