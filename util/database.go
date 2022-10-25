@@ -9,7 +9,7 @@ import (
 var db *sql.DB
 
 func InitDatabase() {
-	database, err := sql.Open("mysql", "neger:schwarz@tcp(127.0.0.1:3306)/phantom")
+	database, err := sql.Open("mysql", "{login-here}@tcp(127.0.0.1:3306)/phantom")
 	db = database
 	if err != nil {
 		panic(err)
