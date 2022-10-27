@@ -3,6 +3,8 @@ package msim
 import (
 	"crypto/sha1"
 	"encoding/base64"
+	"fmt"
+	"phantom/global"
 	"phantom/util"
 	"strconv"
 	"strings"
@@ -27,10 +29,10 @@ var pfproot string = util.GetRootUrl()
 */
 
 // login
-func handleClientAuthentication(client *Msim_Client) bool {
+func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 	util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 		msim_new_data_string("lc", "1"),
-		msim_new_data_string("nc", base64.StdEncoding.EncodeToString([]byte(client.Nonce))),
+		msim_new_data_string("nc", base64.StdEncoding.EncodeToString([]byte(ctx.nonce))),
 		msim_new_data_string("id", "1"),
 	}))
 
@@ -43,19 +45,20 @@ func handleClientAuthentication(client *Msim_Client) bool {
 	username := findValueFromKey("username", loginpacket)
 	version := findValueFromKey("clientver", loginpacket)
 
-	acc, _ := getUserData(username)
+	acc := global.GetUserDataFromEmail(username)
 	client.Account = acc
-	uid := acc.Uid
-	sessionkey := GenerateSessionKey()
+
+	uid := acc.UserId
 	screenname := acc.Screenname
 	password := acc.Password
-	client.Sessionkey = sessionkey
+
 	byte_nc2 := make([]byte, 32)
 	byte_rc4_key := make([]byte, 16)
-	byte_challenge := []byte(client.Nonce)
+	byte_challenge := []byte(ctx.nonce)
 	for i := 0; i < 32; i++ {
 		byte_nc2[i] = byte_challenge[i+32]
 	}
+
 	byte_password := util.ConvertToUtf16(password)
 	hasher := sha1.New()
 	hasher.Write(byte_password)
@@ -79,18 +82,21 @@ func handleClientAuthentication(client *Msim_Client) bool {
 	rc4data := util.DecryptRC4(byte_rc4_key, byte_rc4_data)
 
 	if strings.Contains(string(rc4data), username) {
-		res, _ := util.GetDatabaseHandle().Query("UPDATE accounts SET lastlogin = ? WHERE id= ?", time.Now().UnixNano(), acc.Uid)
+		res, _ := util.GetDatabaseHandle().Query("UPDATE myspace SET lastlogin = ? WHERE id= ?", time.Now().UnixNano(), acc.UserId)
 		res.Close()
 		util.Log("MySpaceIM", "Client Authenticated! | Username: %s | Screenname: %s | Version: 1.0.%s.0", username, screenname, version)
 		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 			msim_new_data_string("lc", "2"),
-			msim_new_data_int("sesskey", sessionkey),
-			msim_new_data_int("proof", sessionkey),
+			msim_new_data_int("sesskey", ctx.sesskey),
+			msim_new_data_int("proof", uid),
 			msim_new_data_int("userid", uid),
 			msim_new_data_int("profileid", uid),
 			msim_new_data_string("uniquenick", screenname),
 			msim_new_data_string("id", "1"),
 		}))
+
+		client.BuildNumber = fmt.Sprintf("1.0.%s.0", version)
+		client.Protocol = "MSIMv?"
 
 		return true
 	} else {
@@ -105,31 +111,32 @@ func handleClientAuthentication(client *Msim_Client) bool {
 }
 
 // Status Messages
-func handleClientPacketSetStatusMessages(client *Msim_Client, packet []byte) {
+func handleClientPacketSetStatusMessages(client *global.Client, ctx *msim_context, packet []byte) {
 	status := findValueFromKey("status", packet)
 	statstring := findValueFromKey("statstring", packet)
 
-	client.StatusCode = status
-	client.StatusText = statstring
-	res, _ := util.GetDatabaseHandle().Query("UPDATE accounts SET headline= ? WHERE id= ?", statstring, client.Account.Uid)
+	ctx.statuscode, _ = strconv.Atoi(status)
+	ctx.statusmessage = statstring
+	res, _ := util.GetDatabaseHandle().Query("UPDATE myspace SET headline= ? WHERE id= ?", statstring, client.Account.UserId)
 	res.Close()
-	for i := 0; i < len(Msim_Clients); i++ {
-		if Msim_Clients[i].Account.Uid != client.Account.Uid {
-			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid= ?", client.Account.Uid)
+	for i := 0; i < len(global.Clients); i++ {
+		if global.Clients[i].Account.UserId != client.Account.UserId {
+			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE from_id= ?", client.Account.UserId)
 			for res.Next() {
-				var msg msim_contact
-				_ = res.Scan(&msg.fromid, &msg.id, &msg.reason)
-				if Msim_Clients[i].Account.Uid == msg.id {
-					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE fromid= ? AND id= ?", Msim_Clients[i].Account.Uid, client.Account.Uid)
+				var msg global.Contact
+				_ = res.Scan(&msg.FromId, &msg.ToId)
+				if global.Clients[i].Account.UserId == msg.ToId {
+					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE from_id= ? AND to_id= ?", global.Clients[i].Account.UserId, client.Account.UserId)
 					res2.Next()
 					var count int
 					res2.Scan(&count)
 					res2.Close()
 					if count > 0 {
-						util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
+						util.WriteTraffic(global.Clients[i].Connection, buildDataPacket([]msim_data_pair{
 							msim_new_data_int("bm", 100),
-							msim_new_data_int("f", client.Account.Uid),
-							msim_new_data_string("msg", "|s|"+status+"|ss|"+statstring+""),
+							msim_new_data_int("f", client.Account.UserId),
+							msim_new_data_string("msg", fmt.Sprintf("|s|%s|ss|%s", status, statstring)),
+							//msim_new_data_string("msg", "|s|"+status+"|ss|"+statstring+""),
 						}))
 					}
 
@@ -141,16 +148,15 @@ func handleClientPacketSetStatusMessages(client *Msim_Client, packet []byte) {
 }
 
 // addbuddy message
-func handleClientPacketAddBuddy(client *Msim_Client, packet []byte) {
+func handleClientPacketAddBuddy(client *global.Client, ctx *msim_context, packet []byte) {
 	if findValueFromKey("newprofileid", packet) == "6221" {
 		util.Debug("MySpace -> handleClientPacketAddBuddy", "MySpace Chatbot Friend Request Detected! Skipping...")
 		return
 	}
 	newprofileid := findValueFromKey("newprofileid", packet)
-	reason := findValueFromKey("reason", packet)
 
 	var count int
-	check, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE id=? and fromid= ?", newprofileid, client.Account.Uid)
+	check, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE to_id=? and from_id= ?", newprofileid, client.Account.UserId)
 	check.Next()
 	check.Scan(&count)
 	check.Close()
@@ -163,26 +169,27 @@ func handleClientPacketAddBuddy(client *Msim_Client, packet []byte) {
 		}))
 		return
 	}
-	util.Debug("addbuddy", "%d:%d", client.Account.Uid, newprofileid)
-	dbres, _ := util.GetDatabaseHandle().Query("INSERT into contacts (`fromid`, `id`, `reason`) VALUES (?, ?, ?)", client.Account.Uid, newprofileid, reason)
+	util.Debug("addbuddy", "%d:%d", client.Account.UserId, newprofileid)
+	dbres, _ := util.GetDatabaseHandle().Query("INSERT into contacts (`from_id`, `to_id`) VALUES (?, ?)", client.Account.UserId, newprofileid)
 	dbres.Close()
 	var count2 int
-	check2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE fromid=? and id= ?", newprofileid, client.Account.Uid)
+	check2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE from_id=? and to_id= ?", newprofileid, client.Account.UserId)
 	check2.Next()
 	check2.Scan(&count2)
 	check2.Close()
 	if count2 > 0 {
-		for i := 0; i < len(Msim_Clients); i++ {
-			if strconv.Itoa(Msim_Clients[i].Account.Uid) == newprofileid {
+		for i := 0; i < len(global.Clients); i++ {
+			if strconv.Itoa(global.Clients[i].Account.UserId) == newprofileid {
 				util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 					msim_new_data_int("bm", 100),
-					msim_new_data_int("f", Msim_Clients[i].Account.Uid),
-					msim_new_data_string("msg", "|s|"+Msim_Clients[i].StatusCode+"|ss|"+Msim_Clients[i].StatusText),
+					msim_new_data_int("f", global.Clients[i].Account.UserId),
+					msim_new_data_string("msg", fmt.Sprintf("|s|%d|ss|%s", users_context[i].statuscode, users_context[i].statusmessage)),
+					//msim_new_data_string("msg", "|s|"+[i].StatusCode+"|ss|"+Msim_Clients[i].StatusText),
 				}))
-				util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
+				util.WriteTraffic(global.Clients[i].Connection, buildDataPacket([]msim_data_pair{
 					msim_new_data_int("bm", 100),
-					msim_new_data_int("f", client.Account.Uid),
-					msim_new_data_string("msg", "|s|"+client.StatusCode+"|ss|"+client.StatusText),
+					msim_new_data_int("f", client.Account.UserId),
+					msim_new_data_string("msg", fmt.Sprintf("|s|%d|ss|%s", ctx.statuscode, ctx.statusmessage)),
 				}))
 			}
 		}
@@ -190,21 +197,21 @@ func handleClientPacketAddBuddy(client *Msim_Client, packet []byte) {
 }
 
 // delbuddy message
-func handleClientPacketDelBuddy(client *Msim_Client, packet []byte) {
+func handleClientPacketDelBuddy(client *global.Client, packet []byte) {
 	delprofileid := findValueFromKey("delprofileid", packet)
-	dbres, _ := util.GetDatabaseHandle().Query("DELETE from contacts WHERE id=? and fromid= ?", delprofileid, client.Account.Uid)
+	dbres, _ := util.GetDatabaseHandle().Query("DELETE from contacts WHERE to_id=? and from_id= ?", delprofileid, client.Account.UserId)
 	dbres.Close()
-	for i := 0; i < len(Msim_Clients); i++ {
-		if strconv.Itoa(Msim_Clients[i].Account.Uid) == delprofileid {
+	for i := 0; i < len(global.Clients); i++ {
+		if strconv.Itoa(global.Clients[i].Account.UserId) == delprofileid {
 			var count int
-			dbres, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE id=? and fromid= ?", client.Account.Uid, delprofileid)
+			dbres, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE to_id=? and from_id= ?", client.Account.UserId, delprofileid)
 			dbres.Next()
 			dbres.Scan(&count)
 			dbres.Close()
 			if count > 0 {
-				util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
+				util.WriteTraffic(global.Clients[i].Connection, buildDataPacket([]msim_data_pair{
 					msim_new_data_int("bm", 100),
-					msim_new_data_int("f", client.Account.Uid),
+					msim_new_data_int("f", client.Account.UserId),
 					msim_new_data_string("msg", "|s|0|ss|Offline"),
 				}))
 			}
@@ -212,29 +219,31 @@ func handleClientPacketDelBuddy(client *Msim_Client, packet []byte) {
 	}
 }
 
-func handleClientOfflineEvents(client *Msim_Client) {
-	for i := 0; i < len(Msim_Clients); i++ {
-		if Msim_Clients[i].Account.Uid != client.Account.Uid {
-			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid= ?", client.Account.Uid)
+func handleClientOfflineEvents(client *global.Client, ctx *msim_context) {
+	for i := 0; i < len(global.Clients); i++ {
+		if global.Clients[i].Account.UserId != client.Account.UserId {
+			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE from_id= ?", client.Account.UserId)
 			for res.Next() {
-				var msg msim_contact
-				_ = res.Scan(&msg.fromid, &msg.id, &msg.reason)
-				if Msim_Clients[i].Account.Uid == msg.id {
-					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE fromid= ? AND id= ?", Msim_Clients[i].Account.Uid, client.Account.Uid)
+				var msg global.Contact
+				_ = res.Scan(&msg.FromId, &msg.ToId)
+				if global.Clients[i].Account.UserId == msg.ToId {
+					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE from_id= ? AND to_id= ?", global.Clients[i].Account.UserId, client.Account.UserId)
 					res2.Next()
 					var count int
 					res2.Scan(&count)
 					res2.Close()
 					if count > 0 {
-						util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
+						util.WriteTraffic(global.Clients[i].Connection, buildDataPacket([]msim_data_pair{
 							msim_new_data_int("bm", 100),
-							msim_new_data_int("f", client.Account.Uid),
-							msim_new_data_string("msg", "|s|"+client.StatusCode+"|ss|"+client.StatusText),
+							msim_new_data_int("f", client.Account.UserId),
+							msim_new_data_string("msg", fmt.Sprintf("|s|%d|ss|%s", ctx.statuscode, ctx.statusmessage)),
+							//msim_new_data_string("msg", "|s|"+ctx.StatusCode+"|ss|"+client.StatusText),
 						}))
 						util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 							msim_new_data_int("bm", 100),
-							msim_new_data_int("f", Msim_Clients[i].Account.Uid),
-							msim_new_data_string("msg", "|s|"+Msim_Clients[i].StatusCode+"|ss|"+Msim_Clients[i].StatusText),
+							msim_new_data_int("f", global.Clients[i].Account.UserId),
+							msim_new_data_string("msg", fmt.Sprintf("|s|%d|ss|%s", users_context[i].statuscode, users_context[i].statusmessage)),
+							//msim_new_data_string("msg", "|s|"+Msim_Clients[i].StatusCode+"|ss|"+Msim_Clients[i].StatusText),
 						}))
 					}
 				}
@@ -244,44 +253,44 @@ func handleClientOfflineEvents(client *Msim_Client) {
 	}
 
 	//offline messages
-	res, _ := util.GetDatabaseHandle().Query("SELECT * from offlinemessages WHERE toid= ?", client.Account.Uid)
+	res, _ := util.GetDatabaseHandle().Query("SELECT * from offlinemsgs WHERE to_id= ?", client.Account.UserId)
 	for res.Next() {
-		var msg msim_offlinemessage
-		_ = res.Scan(&msg.fromid, &msg.toid, &msg.date, &msg.msg)
+		var msg global.OfflineMsg
+		_ = res.Scan(&msg.FromId, &msg.ToId, &msg.Message, &msg.Date)
 		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 			msim_new_data_int("bm", 1),
-			msim_new_data_int("sesskey", client.Sessionkey),
-			msim_new_data_int("f", msg.fromid),
+			msim_new_data_int("sesskey", ctx.sesskey),
+			msim_new_data_int("f", msg.FromId),
 			//	msim_new_data_int("date", msg.date),
-			msim_new_data_string("msg", msg.msg),
+			msim_new_data_string("msg", msg.Message),
 		}))
-		util.Debug("MySpace -> handleClientOfflineEvents", "%d", msg.date)
+		util.Debug("MySpace -> handleClientOfflineEvents", "%d", msg.Date)
 	}
 	res.Close()
-	res2, _ := util.GetDatabaseHandle().Query("DELETE from offlinemessages WHERE toid= ?", client.Account.Uid)
+	res2, _ := util.GetDatabaseHandle().Query("DELETE from offlinemsgs WHERE to_id= ?", client.Account.UserId)
 	res2.Close()
 }
 
 // bm type 1
-func handleClientPacketBuddyInstantMessage(client *Msim_Client, packet []byte) {
+func handleClientPacketBuddyInstantMessage(client *global.Client, ctx *msim_context, packet []byte) {
 	t, _ := strconv.Atoi(findValueFromKey("t", packet))
 	msg := findValueFromKey("msg", packet)
 	date := time.Now().UTC().UnixMilli()
 	found := false
-	for i := 0; i < len(Msim_Clients); i++ {
-		if Msim_Clients[i].Account.Uid == t {
+	for i := 0; i < len(global.Clients); i++ {
+		if global.Clients[i].Account.UserId == t {
 			found = true
-			util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
+			util.WriteTraffic(global.Clients[i].Connection, buildDataPacket([]msim_data_pair{
 				msim_new_data_int("bm", 1),
-				msim_new_data_int("sesskey", Msim_Clients[i].Sessionkey),
-				msim_new_data_int("f", client.Account.Uid),
+				msim_new_data_int("sesskey", users_context[i].sesskey),
+				msim_new_data_int("f", client.Account.UserId),
 				msim_new_data_string("msg", msg),
 			}))
 		}
 	}
 	if !found {
 		if !strings.Contains(msg, "%typing%") && !strings.Contains(msg, "%stoptyping%") {
-			res, _ := util.GetDatabaseHandle().Query("INSERT INTO offlinemessages (`fromid`, `toid`, `date`, `msg`) VALUES (?, ?, ?, ?)", client.Account.Uid, t, date, msg)
+			res, _ := util.GetDatabaseHandle().Query("INSERT INTO offlinemsgs (`from_id`, `to_id`, `message`, `date`) VALUES (?, ?, ?, ?)", client.Account.UserId, t, msg, date)
 			res.Close()
 		}
 	}
@@ -290,13 +299,13 @@ func handleClientPacketBuddyInstantMessage(client *Msim_Client, packet []byte) {
 var buf []byte
 
 // persist 514;8;13 2;8;13 change_profile_picture
-func handleClientPacketChangePicture(client *Msim_Client, packet []byte) {
+func handleClientPacketChangePicture(client *global.Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
 
 	body := strings.Split(strings.Replace(findValueFromKey("body", packet), "\x1c", "", -1), "=")
-	part, err := base64.StdEncoding.DecodeString(unEscapeString(body[len(body)-1]))
+	part, err := base64.StdEncoding.DecodeString(unescapeString(body[len(body)-1]))
 	if err != nil {
 		return
 	}
@@ -318,7 +327,7 @@ func handleClientPacketChangePicture(client *Msim_Client, packet []byte) {
 
 	util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 		msim_new_data_boolean("persistr", true),
-		msim_new_data_int("uid", client.Account.Uid),
+		msim_new_data_int("uid", client.Account.UserId),
 		msim_new_data_int("cmd", cmd^256),
 		msim_new_data_string("dsn", dsn),
 		msim_new_data_string("lid", lid),
@@ -328,19 +337,19 @@ func handleClientPacketChangePicture(client *Msim_Client, packet []byte) {
 }
 
 // persist 1;0;1 get_contact_information
-func handleClientPacketGetContactList(client *Msim_Client, packet []byte) {
+func handleClientPacketGetContactList(client *global.Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
 	util.Debug("MySpace -> handleClientPacketGetContactList", "Requested Contact List...")
-	res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid=?", client.Account.Uid)
+	res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid=?", client.Account.UserId)
 	body := ""
 	for res.Next() {
-		var contact msim_contact
-		_ = res.Scan(&contact.fromid, &contact.id, &contact.reason)
-		accountRow, _ := GetUserDataById(contact.id)
+		var contact global.Contact
+		_ = res.Scan(&contact.FromId, &contact.ToId)
+		accountRow := global.GetUserDataFromUserId(contact.ToId)
 		body += buildDataBody([]msim_data_pair{
-			msim_new_data_int("ContactID", accountRow.Uid),
+			msim_new_data_int("ContactID", accountRow.UserId),
 			msim_new_data_string("Headline", accountRow.headline),
 			msim_new_data_int("Position", 1),                //TODO
 			msim_new_data_string("GroupName", "IM Friends"), //TODO
@@ -369,7 +378,7 @@ func handleClientPacketGetContactList(client *Msim_Client, packet []byte) {
 }
 
 // persist 1;0;2 get_contact_information
-func handleClientPacketGetContactInformation(client *Msim_Client, packet []byte) {
+func handleClientPacketGetContactInformation(client *global.Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
@@ -404,7 +413,7 @@ func handleClientPacketGetContactInformation(client *Msim_Client, packet []byte)
 }
 
 // Persist 1;1;4
-func handleClientPacketUserLookupIMAboutMyself(client *Msim_Client, packet []byte) {
+func handleClientPacketUserLookupIMAboutMyself(client *global.Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
@@ -440,7 +449,7 @@ func handleClientPacketUserLookupIMAboutMyself(client *Msim_Client, packet []byt
 }
 
 // Persist 1;1;17
-func handleClientPacketUserLookupIMByUid(client *Msim_Client, packet []byte) {
+func handleClientPacketUserLookupIMByUid(client *global.Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
@@ -478,7 +487,7 @@ func handleClientPacketUserLookupIMByUid(client *Msim_Client, packet []byte) {
 
 // persist 1;2;6
 // \persist\1\sesskey\7920\cmd\1\dsn\2\uid\1\lid\6\rid\8\body\\final\
-func handleClientPacketGetGroups(client *Msim_Client, packet []byte) {
+func handleClientPacketGetGroups(client *global.Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
@@ -502,7 +511,7 @@ func handleClientPacketGetGroups(client *Msim_Client, packet []byte) {
 }
 
 // Persist 1;4;3, 1;4;5
-func handleClientPacketUserLookupMySpaceByUid(client *Msim_Client, packet []byte) {
+func handleClientPacketUserLookupMySpaceByUid(client *global.Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
@@ -534,7 +543,7 @@ func handleClientPacketUserLookupMySpaceByUid(client *Msim_Client, packet []byte
 }
 
 // Persist 1;5;7
-func handleClientPacketUserLookupMySpaceByUsernameOrEmail(client *Msim_Client, packet []byte) {
+func handleClientPacketUserLookupMySpaceByUsernameOrEmail(client *global.Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
