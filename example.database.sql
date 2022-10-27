@@ -2,9 +2,9 @@
 -- version 5.2.0
 -- https://www.phpmyadmin.net/
 --
--- Host: localhost
--- Generation Time: Oct 26, 2022 at 12:31 AM
--- Server version: 10.5.15-MariaDB-0+deb11u1
+-- Host: 127.0.0.1
+-- Generation Time: Oct 27, 2022 at 10:27 PM
+-- Server version: 10.4.25-MariaDB
 -- PHP Version: 7.4.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `example_phantom`
+-- Database: `example`
 --
 
 -- --------------------------------------------------------
@@ -29,26 +29,19 @@ SET time_zone = "+00:00";
 
 CREATE TABLE `accounts` (
   `id` int(11) NOT NULL,
-  `username` varchar(255) NOT NULL,
-  `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
   `screenname` varchar(255) NOT NULL,
-  `avatar` longtext DEFAULT NULL,
-  `avatartype` varchar(255) DEFAULT NULL,
-  `BandName` varchar(255) NOT NULL,
-  `SongName` varchar(255) NOT NULL,
-  `Age` varchar(255) NOT NULL,
-  `Gender` varchar(255) NOT NULL DEFAULT 'M',
-  `Location` varchar(255) NOT NULL,
-  `headline` varchar(255) NOT NULL DEFAULT '',
-  `lastlogin` bigint(20) NOT NULL DEFAULT 0
+  `uin` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `accounts`
 --
 
-INSERT INTO `accounts` (`id`, `username`, `password`, `screenname`, `avatar`, `avatartype`, `BandName`, `SongName`, `Age`, `Gender`, `Location`, `headline`, `lastlogin`) VALUES
-(1, 'test', 'test', 'test account', NULL, NULL, '', '', '', '', '', '', 0);
+INSERT INTO `accounts` (`id`, `email`, `password`, `screenname`, `uin`) VALUES
+(1, 'test@phantom-im.xyz', 'test', 'TestUser', 10000),
+(2, 'test2@phantom-im.xyz', 'test2', 'TestTwo', 10001);
 
 -- --------------------------------------------------------
 
@@ -57,23 +50,86 @@ INSERT INTO `accounts` (`id`, `username`, `password`, `screenname`, `avatar`, `a
 --
 
 CREATE TABLE `contacts` (
-  `fromid` int(11) NOT NULL,
-  `id` int(11) NOT NULL,
-  `reason` varchar(255) NOT NULL
+  `from_id` int(11) NOT NULL,
+  `to_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `offlinemessages`
+-- Table structure for table `msn`
 --
 
-CREATE TABLE `offlinemessages` (
-  `fromid` int(10) NOT NULL,
-  `toid` int(10) NOT NULL,
-  `date` bigint(30) NOT NULL,
-  `msg` longtext NOT NULL
+CREATE TABLE `msn` (
+  `id` int(11) NOT NULL,
+  `clversion` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `msn`
+--
+
+INSERT INTO `msn` (`id`, `clversion`) VALUES
+(1, 0),
+(2, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `myspace`
+--
+
+CREATE TABLE `myspace` (
+  `id` int(11) NOT NULL,
+  `avatartype` varchar(255) NOT NULL,
+  `bandname` varchar(255) NOT NULL,
+  `songname` varchar(255) NOT NULL,
+  `age` int(11) NOT NULL,
+  `gender` varchar(255) NOT NULL,
+  `location` varchar(255) NOT NULL,
+  `headline` varchar(255) NOT NULL,
+  `lastlogin` bigint(20) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `myspace`
+--
+
+INSERT INTO `myspace` (`id`, `avatartype`, `bandname`, `songname`, `age`, `gender`, `location`, `headline`, `lastlogin`) VALUES
+(1, '', '', '', 0, '', '', '', 0),
+(2, '', '', '', 0, '', '', '', 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `offlinemsgs`
+--
+
+CREATE TABLE `offlinemsgs` (
+  `from_id` int(11) NOT NULL,
+  `to_id` int(11) NOT NULL,
+  `message` longtext NOT NULL,
+  `date` bigint(30) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `upload`
+--
+
+CREATE TABLE `upload` (
+  `id` int(11) NOT NULL,
+  `avatar` longtext NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `upload`
+--
+
+INSERT INTO `upload` (`id`, `avatar`) VALUES
+(1, ''),
+(2, '');
 
 --
 -- Indexes for dumped tables
@@ -93,7 +149,7 @@ ALTER TABLE `accounts`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
