@@ -2,11 +2,12 @@ package msnp
 
 import (
 	"fmt"
+	"phantom/global"
 	"phantom/util"
 	"strings"
 )
 
-func handleClientIncomingPackets(client *Msnp_Client, data string) {
+func handleClientIncomingPackets(client *global.Client, ctx *msnp_context, data string) {
 
 	switch {
 	case strings.Contains(data, "VER"):
@@ -14,13 +15,14 @@ func handleClientIncomingPackets(client *Msnp_Client, data string) {
 	case strings.Contains(data, "INF"):
 		handleClientPacketAuthenticationMethod(client, data)
 	case strings.Contains(data, "USR") && strings.Contains(data, "I"):
-		handleClientPacketAuthenticationBegin(client, data)
+		handleClientPacketAuthenticationBegin(client, ctx, data)
 	}
 
 }
 
-func handleProtocolVersionRequest(client *Msnp_Client, data string) bool {
+func handleProtocolVersionRequest(client *global.Client, data string) bool {
 	if strings.Contains(data, "MSNP2") {
+		client.Protocol = "MSNP2"
 		util.Debug("MSNP -> handleProtocolVersionRequest", fmt.Sprintf("TrID Dbg: %v", []byte(getTrId(data, "VER"))))
 		util.WriteTraffic(client.Connection, msnp_new_command(data, "VER", "MSNP2"))
 		return true
@@ -30,25 +32,25 @@ func handleProtocolVersionRequest(client *Msnp_Client, data string) bool {
 	}
 }
 
-func handleClientPacketNegotiateProtocolVersion(client *Msnp_Client, data string) {
+func handleClientPacketNegotiateProtocolVersion(client *global.Client, data string) {
 	handleProtocolVersionRequest(client, data)
 }
 
-func handleClientPacketAuthenticationMethod(client *Msnp_Client, data string) {
+func handleClientPacketAuthenticationMethod(client *global.Client, data string) {
 	//todo
 	//str := strings.Replace(data, "\r\n", "", -1)
 	util.Debug("MSNP -> handleClientPacketAuthenticationMethod", fmt.Sprintf("TrID Dbg: %v", []byte(getTrId(data, "INF"))))
 	util.WriteTraffic(client.Connection, msnp_new_command(data, "INF", "CTP"))
 }
 
-func handleClientPacketAuthenticationBegin(client *Msnp_Client, data string) {
-	if !client.Dispatched {
+func handleClientPacketAuthenticationBegin(client *global.Client, ctx *msnp_context, data string) {
+	if !ctx.dispatched {
 		util.WriteTraffic(client.Connection, msnp_new_command(data, "XFR", "NS localhost:1864"))
 		util.Log("MSN Messenger", "Redirecting Client to Notification Server...")
-		client.Dispatched = true
+		ctx.dispatched = true
 	} else {
 		account := strings.Replace(findValueFromData("I", data), "@hotmail.com", "@phantom-im.xyz", -1)
-		client.Account = getUserData(account)
+		client.Account = global.GetUserDataFromEmail(account)
 
 		util.Debug("MSNP -> handleClientPacketAuthenticationBegin", "um data test: %s", account)
 		util.Debug("MSNP -> handleClientPacketAuthenticationBegin", "pw data test1: %v", []byte(strings.Replace(findValueFromData("I", data, 1), "\r\n", "", -1)))

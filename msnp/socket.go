@@ -1,6 +1,9 @@
 package msnp
 
-import "phantom/util"
+import (
+	"phantom/global"
+	"phantom/util"
+)
 
 func HandleNotification() {
 	tcpServer := util.CreateListener(1864)
@@ -16,27 +19,42 @@ func HandleNotification() {
 
 		util.Log("MSN Messenger", "Client awaiting authentication from %s", tcpClient.RemoteAddr().String())
 
-		client := Msnp_Client{
+		client := global.Client{
 			Connection: tcpClient,
-			Dispatched: true,
 		}
 
-		Msnp_Clients = append(Msnp_Clients, &client)
+		global.AddClient(&client)
+
+		ctx := msnp_context{
+			dispatched: true,
+		}
 
 		for {
 			data, success := util.ReadTraffic(client.Connection)
 
-			handleClientIncomingPackets(&client, string(data))
+			handleClientIncomingPackets(&client, &ctx, string(data))
 
 			if !success {
 				break
 			}
 		}
+
+		for i := 0; i < len(global.Clients); i++ {
+			if global.Clients[i].Account.Email == client.Account.Email {
+				util.Debug("MSNP -> HandleNotification", "Removing from clients from List...")
+				global.Clients = global.RemoveClient(global.Clients, i)
+			}
+		}
+		client.Connection.Close()
 	}
 }
 
-func HandleDispatch(client *Msnp_Client, firstread string) {
+func HandleDispatch(client *global.Client, firstread string) {
 	util.Log("MSN Messenger", "Client awaiting dispatch from %s", client.Connection.RemoteAddr().String())
+
+	ctx := msnp_context{
+		dispatched: true,
+	}
 
 	// Send first response command to MSN Client, Requesting INF Data
 	if !handleProtocolVersionRequest(client, firstread) {
@@ -47,17 +65,17 @@ func HandleDispatch(client *Msnp_Client, firstread string) {
 	for {
 		data, success := util.ReadTraffic(client.Connection)
 
-		handleClientIncomingPackets(client, string(data))
+		handleClientIncomingPackets(client, &ctx, string(data))
 
 		if !success {
 			break
 		}
 	}
 
-	for i := 0; i < len(Msnp_Clients); i++ {
-		if Msnp_Clients[i].Account.Email == client.Account.Email {
+	for i := 0; i < len(global.Clients); i++ {
+		if global.Clients[i].Account.Email == client.Account.Email {
 			util.Debug("MSNP -> HandleDispatch", "Removing from clients from List...")
-			Msnp_Clients = RemoveMsnpClient(Msnp_Clients, i)
+			global.Clients = global.RemoveClient(global.Clients, i)
 		}
 	}
 	client.Connection.Close()

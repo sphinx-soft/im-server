@@ -3,7 +3,6 @@ package msnp
 import (
 	"bytes"
 	"fmt"
-	"phantom/util"
 	"strings"
 )
 
@@ -53,26 +52,4 @@ func getTrId(data string, cmd string) string {
 	splits := strings.Split(decode, " ")
 
 	return string(bytes.Trim([]byte(splits[1]), "\x00"))
-}
-
-func RemoveMsnpClient(s []*Msnp_Client, i int) []*Msnp_Client {
-	s[i] = s[len(s)-1]
-	return s[:len(s)-1]
-}
-
-func getUserData(username string) msnp_account {
-
-	var acc msnp_account
-
-	row, err := util.GetDatabaseHandle().Query("SELECT * from msnp WHERE email= ?", username)
-
-	if err != nil {
-		util.Error("Failed to get MSNP userdata: %s", err.Error())
-	}
-
-	row.Next()
-	row.Scan(&acc.Uid, &acc.Email, &acc.Password, &acc.Screenname)
-	row.Close()
-
-	return acc
 }

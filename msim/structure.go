@@ -1,49 +1,28 @@
 package msim
 
-import "net"
-
 type msim_data_pair struct {
 	Key   string
 	Value string
 }
 
-type msim_contact struct {
-	fromid int
-	id     int
-	reason string
+type msim_context struct {
+	nonce         string
+	sesskey       int
+	statuscode    int
+	statusmessage string
+	details       msim_user_details
 }
 
-type Msim_Client struct {
-	Connection  net.Conn
-	Nonce       string
-	Sessionkey  int
-	Account     msim_account
-	StatusCode  string
-	StatusText  string
-	BuildNumber string
-}
-
-type msim_account struct {
-	Uid        int
-	Username   string
-	Password   string
-	Screenname string
-	Avatar     string
+type msim_user_details struct {
+	userid     int
 	avatartype string
-	BandName   string
-	SongName   string
-	Age        string
-	Gender     string
-	Location   string
+	bandname   string
+	songname   string
+	age        int
+	gender     string
+	location   string
 	headline   string
 	lastlogin  int64
 }
 
-type msim_offlinemessage struct {
-	fromid int
-	toid   int
-	date   int
-	msg    string
-}
-
-var Msim_Clients []*Msim_Client
+var users_context []*msim_context
