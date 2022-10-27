@@ -1,6 +1,7 @@
 package main
 
 import (
+	"phantom/global"
 	"phantom/http"
 	"phantom/msim"
 	"phantom/msnp"
@@ -25,30 +26,23 @@ func port1863Handler() {
 		data, success := util.ReadTrafficEx(tcpClient)
 
 		if success {
-			if strings.Contains(string(data), "VER") {
+			if strings.HasPrefix(string(data), "VER") {
 				msnp_client = true
 			}
 		} else {
 			msnp_client = false
 		}
 
+		client := global.Client{
+			Connection: tcpClient,
+		}
+
 		// Handle MSNP DS Requests and redirect to 1864
 		if msnp_client {
-			Msnp := msnp.Msnp_Client{
-				Connection: tcpClient,
-				Dispatched: false,
-			}
-
-			go msnp.HandleDispatch(&Msnp, string(data))
-
+			go msnp.HandleDispatch(&client, string(data))
 		} else {
-			Msim := msim.Msim_Client{
-				Connection: tcpClient,
-				Nonce:      msim.GenerateNonce(),
-			}
-
-			go msim.HandleClients(&Msim)
-			go msim.HandleClientKeepalive(&Msim)
+			go msim.HandleClients(&client)
+			go msim.HandleClientKeepalive(&client)
 
 		}
 	}

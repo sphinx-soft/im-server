@@ -2,6 +2,7 @@ package msim
 
 import (
 	"math/rand"
+	"phantom/global"
 	"phantom/util"
 	"strconv"
 	"strings"
@@ -68,7 +69,7 @@ func buildDataBody(datapairs []msim_data_pair) string {
 	return final
 }
 
-func GenerateNonce() string {
+func generateNonce() string {
 
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	b := make([]rune, 0x40)
@@ -78,42 +79,43 @@ func GenerateNonce() string {
 	return string(b)
 }
 
-func GenerateSessionKey() int {
+func generateSessionKey() int {
 	return rand.Intn(100000)
 }
 
-func getUserData(username string) (msim_account, bool) {
+func getMySpaceDataByEmail(email string) (msim_user_details, bool) {
+	var user msim_user_details
 
-	var acc msim_account
+	acc, _ := global.GetUserDataFromEmail(email)
 
-	row, err := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE username= ?", username)
+	row, err := util.GetDatabaseHandle().Query("SELECT * from myspace WHERE id= ?", acc.UserId)
 	if err != nil {
 		util.Error(err.Error())
-		return acc, true
+		return user, true
 	}
+
 	row.Next()
-	row.Scan(&acc.Uid, &acc.Username, &acc.Password, &acc.Screenname, &acc.Avatar, &acc.avatartype,
-		&acc.BandName, &acc.SongName, &acc.Age, &acc.Gender, &acc.Location, &acc.headline, &acc.lastlogin)
+	row.Scan(&user.userid, &user.avatartype, &user.bandname, &user.songname, &user.age, &user.gender, &user.location, &user.headline, &user.lastlogin)
 	row.Close()
 
-	return acc, false
+	return user, true
 }
 
-func GetUserDataById(userid int) (msim_account, bool) {
+func getMySpaceDataByUserId(uid int) (msim_user_details, bool) {
+	var user msim_user_details
 
-	var acc msim_account
+	acc, _ := global.GetUserDataFromUserId(uid)
 
-	row, err := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE id= ?", userid)
+	row, err := util.GetDatabaseHandle().Query("SELECT * from myspace WHERE id= ?", acc.UserId)
 	if err != nil {
 		util.Error(err.Error())
-		return acc, true
+		return user, true
 	}
 	row.Next()
-	row.Scan(&acc.Uid, &acc.Username, &acc.Password, &acc.Screenname, &acc.Avatar, &acc.avatartype,
-		&acc.BandName, &acc.SongName, &acc.Age, &acc.Gender, &acc.Location, &acc.headline, &acc.lastlogin)
+	row.Scan(&user.userid, &user.avatartype, &user.bandname, &user.songname, &user.age, &user.gender, &user.location, &user.headline, &user.lastlogin)
 	row.Close()
 
-	return acc, false
+	return user, true
 }
 
 func escapeString(data string) string {
@@ -121,13 +123,17 @@ func escapeString(data string) string {
 	res = strings.Replace(res, "\\", "\\2", -1)
 	return res
 }
-func unEscapeString(data string) string {
+func unescapeString(data string) string {
 	res := strings.Replace(data, "/1", "/", -1)
 	res = strings.Replace(res, "\\2", "\\", -1)
 	return res
 }
 
-func RemoveMsimClient(s []*Msim_Client, i int) []*Msim_Client {
+func addUserContext(ctx *msim_context) {
+	users_context = append(users_context, ctx)
+}
+
+func removeUserContext(s []*msim_context, i int) []*msim_context {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
 }

@@ -1,12 +1,13 @@
 package msim
 
 import (
+	"phantom/global"
 	"phantom/util"
 	"strings"
 	"time"
 )
 
-func handleClientIncomingPersistPackets(client *Msim_Client, data []byte) {
+func handleClientIncomingPersistPackets(client *global.Client, ctx *msim_context, data []byte) {
 	str := string(data)
 
 	if strings.Contains(str, "\\persist\\1") {
@@ -53,24 +54,24 @@ func handleClientIncomingPersistPackets(client *Msim_Client, data []byte) {
 	}
 }
 
-func handleClientIncomingPackets(client *Msim_Client, data []byte) {
+func handleClientIncomingPackets(client *global.Client, ctx *msim_context, data []byte) {
 	str := string(data)
 
 	if strings.Contains(str, "\\status") {
-		handleClientPacketSetStatusMessages(client, data)
+		handleClientPacketSetStatusMessages(client, ctx, data)
 	}
 	if strings.Contains(str, "\\addbuddy") {
-		handleClientPacketAddBuddy(client, data)
+		handleClientPacketAddBuddy(client, ctx, data)
 	}
 	if strings.Contains(str, "\\delbuddy") {
 		handleClientPacketDelBuddy(client, data)
 	}
 	if strings.Contains(str, "\\bm\\1") {
-		handleClientPacketBuddyInstantMessage(client, data)
+		handleClientPacketBuddyInstantMessage(client, ctx, data)
 	}
 }
 
-func HandleClientKeepalive(client *Msim_Client) {
+func HandleClientKeepalive(client *global.Client) {
 	for {
 		time.Sleep(180 * time.Second)
 		err := util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
@@ -82,27 +83,28 @@ func HandleClientKeepalive(client *Msim_Client) {
 	}
 }
 
-func HandleClients(client *Msim_Client) {
+func HandleClients(client *global.Client) {
 	util.Log("MySpaceIM", "Client awaiting authentication from %s", client.Connection.RemoteAddr().String())
 
-	if !handleClientAuthentication(client) {
+	client.Client = "MySpaceIM"
+
+	ctx := msim_context{
+		nonce:   generateNonce(),
+		sesskey: generateSessionKey(),
+	}
+
+	addUserContext(&ctx)
+
+	if !handleClientAuthentication(client, &ctx) {
 		client.Connection.Close()
 		return
 	}
 
-	Msim_Clients = append(Msim_Clients, client)
+	global.AddClient(client)
 
-	//unused for now
-	/*global := util.Global_Client{
-		Client:   "MySpace",
-		Build:    client.BuildNumber,
-		Protocol: "MSIMv?",
-		Username: client.Account.Screenname,
-		Friends:  69,
-	}
-	util.AddGlobalClient(&global)*/
+	handleClientBroadcastSignOnStatus(client, &ctx)
+	handleClientHandleOfflineMessages(client, &ctx)
 
-	handleClientOfflineEvents(client)
 	for {
 		data, success := util.ReadTraffic(client.Connection)
 
@@ -111,8 +113,8 @@ func HandleClients(client *Msim_Client) {
 		for i := 0; i < len(receivedpackets); i++ {
 			if strings.Contains(receivedpackets[i], "\\") {
 				util.Debug("MySpace -> HandleClients -> TCP", "Reading Split Data: %s", string(receivedpackets[i]+"final\\"))
-				handleClientIncomingPackets(client, []byte(receivedpackets[i]+"final\\"))
-				handleClientIncomingPersistPackets(client, []byte(receivedpackets[i]+"final\\"))
+				handleClientIncomingPackets(client, &ctx, []byte(receivedpackets[i]+"final\\"))
+				handleClientIncomingPersistPackets(client, &ctx, []byte(receivedpackets[i]+"final\\"))
 			}
 		}
 
@@ -123,38 +125,21 @@ func HandleClients(client *Msim_Client) {
 
 	util.Log("MySpaceIM", "Client Disconnected! | Screenname: %s", client.Account.Screenname)
 
-	//notify all users that user logged out
-	for i := 0; i < len(Msim_Clients); i++ {
-		if Msim_Clients[i].Account.Uid != client.Account.Uid {
-			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid= ?", client.Account.Uid)
-			for res.Next() {
-				var msg msim_contact
-				_ = res.Scan(&msg.fromid, &msg.id, &msg.reason)
-				if Msim_Clients[i].Account.Uid == msg.id {
-					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE fromid= ? AND id= ?", Msim_Clients[i].Account.Uid, client.Account.Uid)
-					res2.Next()
-					var count int
-					res2.Scan(&count)
-					res2.Close()
-					if count > 0 {
-						util.WriteTraffic(Msim_Clients[i].Connection, buildDataPacket([]msim_data_pair{
-							msim_new_data_int("bm", 100),
-							msim_new_data_int("f", client.Account.Uid),
-							msim_new_data_string("msg", "|s|0|ss|"+client.StatusText),
-						}))
-					}
+	handleClientBroadcastSignOffStatus(client, &ctx)
 
-				}
-			}
-			res.Close()
+	for i := 0; i < len(global.Clients); i++ {
+		if global.Clients[i].Account.Email == client.Account.Email {
+			util.Debug("MySpace -> HandleClients", "Removing from clients from Client List...")
+			global.Clients = global.RemoveClient(global.Clients, i)
 		}
 	}
 
-	for i := 0; i < len(Msim_Clients); i++ {
-		if Msim_Clients[i].Account.Username == client.Account.Username {
-			util.Debug("MySpace -> HandleClients", "Removing from clients from List...")
-			Msim_Clients = RemoveMsimClient(Msim_Clients, i)
+	for ix := 0; ix < len(users_context); ix++ {
+		if users_context[ix].sesskey == ctx.sesskey {
+			util.Debug("MySpace -> HandleClients", "Removing from clients from Context List...")
+			users_context = removeUserContext(users_context, ix)
 		}
 	}
+
 	client.Connection.Close()
 }

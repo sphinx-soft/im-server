@@ -3,7 +3,7 @@ package msnp
 import (
 	"bytes"
 	"fmt"
-	"phantom/util"
+	"math/rand"
 	"strings"
 )
 
@@ -55,24 +55,15 @@ func getTrId(data string, cmd string) string {
 	return string(bytes.Trim([]byte(splits[1]), "\x00"))
 }
 
-func RemoveMsnpClient(s []*Msnp_Client, i int) []*Msnp_Client {
-	s[i] = s[len(s)-1]
-	return s[:len(s)-1]
+func generateContextKey() int {
+	return rand.Intn(100000)
 }
 
-func getUserData(username string) msnp_account {
+func addUserContext(ctx *msnp_context) {
+	msn_context_list = append(msn_context_list, ctx)
+}
 
-	var acc msnp_account
-
-	row, err := util.GetDatabaseHandle().Query("SELECT * from msnp WHERE email= ?", username)
-
-	if err != nil {
-		util.Error("Failed to get MSNP userdata: %s", err.Error())
-	}
-
-	row.Next()
-	row.Scan(&acc.Uid, &acc.Email, &acc.Password, &acc.Screenname)
-	row.Close()
-
-	return acc
+func removeUserContext(s []*msnp_context, i int) []*msnp_context {
+	s[i] = s[len(s)-1]
+	return s[:len(s)-1]
 }
