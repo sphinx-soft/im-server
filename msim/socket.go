@@ -67,7 +67,7 @@ func handleClientIncomingPackets(client *global.Client, ctx *msim_context, data 
 		handleClientPacketDelBuddy(client, data)
 	}
 	if strings.Contains(str, "\\bm\\1") {
-		handleClientPacketBuddyInstantMessage(client, data)
+		handleClientPacketBuddyInstantMessage(client, ctx, data)
 	}
 }
 
@@ -86,6 +86,8 @@ func HandleClientKeepalive(client *global.Client) {
 func HandleClients(client *global.Client) {
 	util.Log("MySpaceIM", "Client awaiting authentication from %s", client.Connection.RemoteAddr().String())
 
+	client.Client = "MySpaceIM"
+
 	ctx := msim_context{
 		nonce:   generateNonce(),
 		sesskey: generateSessionKey(),
@@ -100,7 +102,9 @@ func HandleClients(client *global.Client) {
 
 	global.AddClient(client)
 
-	handleClientOfflineEvents(client, &ctx)
+	handleClientBroadcastSignOnStatus(client, &ctx)
+	handleClientHandleOfflineMessages(client, &ctx)
+
 	for {
 		data, success := util.ReadTraffic(client.Connection)
 
@@ -121,38 +125,21 @@ func HandleClients(client *global.Client) {
 
 	util.Log("MySpaceIM", "Client Disconnected! | Screenname: %s", client.Account.Screenname)
 
-	//notify all users that user logged out
-	for i := 0; i < len(global.Clients); i++ {
-		if global.Clients[i].Account.UserId != client.Account.UserId {
-			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid= ?", client.Account.UserId)
-			for res.Next() {
-				var msg global.Contact
-				_ = res.Scan(&msg.FromId, &msg.ToId)
-				if global.Clients[i].Account.UserId == msg.ToId {
-					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE fromid= ? AND id= ?", global.Clients[i].Account.UserId, client.Account.UserId)
-					res2.Next()
-					var count int
-					res2.Scan(&count)
-					res2.Close()
-					if count > 0 {
-						util.WriteTraffic(global.Clients[i].Connection, buildDataPacket([]msim_data_pair{
-							msim_new_data_int("bm", 100),
-							msim_new_data_int("f", client.Account.UserId),
-							msim_new_data_string("msg", "|s|0|ss|"+ctx.statusmessage),
-						}))
-					}
-
-				}
-			}
-			res.Close()
-		}
-	}
+	handleClientBroadcastSignOffStatus(client, &ctx)
 
 	for i := 0; i < len(global.Clients); i++ {
 		if global.Clients[i].Account.Email == client.Account.Email {
-			util.Debug("MySpace -> HandleClients", "Removing from clients from List...")
+			util.Debug("MySpace -> HandleClients", "Removing from clients from Client List...")
 			global.Clients = global.RemoveClient(global.Clients, i)
 		}
 	}
+
+	for ix := 0; ix < len(users_context); ix++ {
+		if users_context[ix].sesskey == ctx.sesskey {
+			util.Debug("MySpace -> HandleClients", "Removing from clients from Context List...")
+			users_context = removeUserContext(users_context, ix)
+		}
+	}
+
 	client.Connection.Close()
 }

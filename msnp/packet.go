@@ -4,18 +4,26 @@ import (
 	"fmt"
 	"phantom/global"
 	"phantom/util"
+	"strconv"
 	"strings"
 )
 
 func handleClientIncomingPackets(client *global.Client, ctx *msnp_context, data string) {
 
 	switch {
-	case strings.Contains(data, "VER"):
+	case strings.HasPrefix(data, "VER"):
 		handleClientPacketNegotiateProtocolVersion(client, data)
-	case strings.Contains(data, "INF"):
+	case strings.HasPrefix(data, "INF"):
 		handleClientPacketAuthenticationMethod(client, data)
-	case strings.Contains(data, "USR") && strings.Contains(data, "I"):
+	case strings.HasPrefix(data, "USR") && strings.Contains(data, " I "):
 		handleClientPacketAuthenticationBegin(client, ctx, data)
+
+	case strings.HasPrefix(data, "SYN"):
+		handleClientPacketContactListSynchronization(client, data)
+	case strings.HasPrefix(data, "CHG"):
+		handleClientPacketChangeStatusRequest(client, data)
+	case strings.HasPrefix(data, "CVR"):
+		handleClientPacketGetClientServerInformation(client, data)
 	}
 
 }
@@ -50,7 +58,7 @@ func handleClientPacketAuthenticationBegin(client *global.Client, ctx *msnp_cont
 		ctx.dispatched = true
 	} else {
 		account := strings.Replace(findValueFromData("I", data), "@hotmail.com", "@phantom-im.xyz", -1)
-		client.Account = global.GetUserDataFromEmail(account)
+		client.Account, _ = global.GetUserDataFromEmail(account)
 
 		util.Debug("MSNP -> handleClientPacketAuthenticationBegin", "um data test: %s", account)
 		util.Debug("MSNP -> handleClientPacketAuthenticationBegin", "pw data test1: %v", []byte(strings.Replace(findValueFromData("I", data, 1), "\r\n", "", -1)))
@@ -63,4 +71,44 @@ func handleClientPacketAuthenticationBegin(client *global.Client, ctx *msnp_cont
 			util.WriteTraffic(client.Connection, msnp_new_command_noargs(data, "911"))
 		}
 	}
+}
+
+func handleClientPacketContactListSynchronization(client *global.Client, data string) {
+
+	var clv int
+
+	res, _ := util.GetDatabaseHandle().Query("SELECT clversion from msn WHERE id=?", client.Account.UserId)
+	res.Scan(&clv)
+
+	util.WriteTraffic(client.Connection, msnp_new_command(data, "SYN", strconv.Itoa(clv)))
+
+	//todo
+	if findValueFromData("SYN", data, 1) == strconv.Itoa(clv) {
+
+		res, _ = util.GetDatabaseHandle().Query("SELECT * from contacts WHERE from_id=?", client.Account.UserId)
+
+		for res.Next() {
+			var contact global.Contact
+			res.Scan(&contact.FromId, &contact.ToId)
+
+		}
+
+	}
+
+}
+
+func handleClientPacketChangeStatusRequest(client *global.Client, data string) {
+
+	//todo
+	util.WriteTraffic(client.Connection, msnp_new_command(data, "CHG", findValueFromData("CHG", data, 1)))
+
+}
+
+func handleClientPacketGetClientServerInformation(client *global.Client, data string) {
+
+	//todo
+	build := findValueFromData("i386", data, 1)
+	client.BuildNumber = build
+
+	util.WriteTraffic(client.Connection, msnp_new_command(data, "CVR", fmt.Sprintf("%s %s %s %s %s", build, build, build, "https://archive.org/download/MsnMessengerClients2/MSN%20Messenger%201.0.0863%20%28English%20-%20United%20States%29.zip", "http://phantom-im.xyz")))
 }

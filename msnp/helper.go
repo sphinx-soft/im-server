@@ -3,6 +3,7 @@ package msnp
 import (
 	"bytes"
 	"fmt"
+	"math/rand"
 	"strings"
 )
 
@@ -52,4 +53,17 @@ func getTrId(data string, cmd string) string {
 	splits := strings.Split(decode, " ")
 
 	return string(bytes.Trim([]byte(splits[1]), "\x00"))
+}
+
+func generateContextKey() int {
+	return rand.Intn(100000)
+}
+
+func addUserContext(ctx *msnp_context) {
+	msn_context_list = append(msn_context_list, ctx)
+}
+
+func removeUserContext(s []*msnp_context, i int) []*msnp_context {
+	s[i] = s[len(s)-1]
+	return s[:len(s)-1]
 }

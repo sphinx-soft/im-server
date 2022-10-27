@@ -45,7 +45,7 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 	username := findValueFromKey("username", loginpacket)
 	version := findValueFromKey("clientver", loginpacket)
 
-	acc := global.GetUserDataFromEmail(username)
+	acc, _ := global.GetUserDataFromEmail(username)
 	client.Account = acc
 
 	uid := acc.UserId
@@ -108,6 +108,90 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 		}))
 	}
 	return false
+}
+
+// broadcast sign on status
+func handleClientBroadcastSignOnStatus(client *global.Client, ctx *msim_context) {
+	for i := 0; i < len(global.Clients); i++ {
+		if global.Clients[i].Account.UserId != client.Account.UserId {
+			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE from_id= ?", client.Account.UserId)
+			for res.Next() {
+				var msg global.Contact
+				_ = res.Scan(&msg.FromId, &msg.ToId)
+				if global.Clients[i].Account.UserId == msg.ToId {
+					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE from_id= ? AND to_id= ?", global.Clients[i].Account.UserId, client.Account.UserId)
+					res2.Next()
+					var count int
+					res2.Scan(&count)
+					res2.Close()
+					if count > 0 {
+						util.WriteTraffic(global.Clients[i].Connection, buildDataPacket([]msim_data_pair{
+							msim_new_data_int("bm", 100),
+							msim_new_data_int("f", client.Account.UserId),
+							msim_new_data_string("msg", fmt.Sprintf("|s|%d|ss|%s", ctx.statuscode, ctx.statusmessage)),
+							//msim_new_data_string("msg", "|s|"+ctx.StatusCode+"|ss|"+client.StatusText),
+						}))
+						util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
+							msim_new_data_int("bm", 100),
+							msim_new_data_int("f", global.Clients[i].Account.UserId),
+							msim_new_data_string("msg", fmt.Sprintf("|s|%d|ss|%s", users_context[i].statuscode, users_context[i].statusmessage)),
+							//msim_new_data_string("msg", "|s|"+Msim_Clients[i].StatusCode+"|ss|"+Msim_Clients[i].StatusText),
+						}))
+					}
+				}
+			}
+			res.Close()
+		}
+	}
+}
+
+// broadcast sign off events
+func handleClientBroadcastSignOffStatus(client *global.Client, ctx *msim_context) {
+	for i := 0; i < len(global.Clients); i++ {
+		if global.Clients[i].Account.UserId != client.Account.UserId {
+			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE from_id= ?", client.Account.UserId)
+			for res.Next() {
+				var msg global.Contact
+				_ = res.Scan(&msg.FromId, &msg.ToId)
+				if global.Clients[i].Account.UserId == msg.ToId {
+					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE from_id= ? AND to_id= ?", global.Clients[i].Account.UserId, client.Account.UserId)
+					res2.Next()
+					var count int
+					res2.Scan(&count)
+					res2.Close()
+					if count > 0 {
+						util.WriteTraffic(global.Clients[i].Connection, buildDataPacket([]msim_data_pair{
+							msim_new_data_int("bm", 100),
+							msim_new_data_int("f", client.Account.UserId),
+							msim_new_data_string("msg", fmt.Sprintf("|s|0|ss|%s", ctx.statusmessage)),
+						}))
+					}
+
+				}
+			}
+			res.Close()
+		}
+	}
+}
+
+// handle offline messages
+func handleClientHandleOfflineMessages(client *global.Client, ctx *msim_context) {
+	res, _ := util.GetDatabaseHandle().Query("SELECT * from offlinemsgs WHERE to_id= ?", client.Account.UserId)
+	for res.Next() {
+		var msg global.OfflineMsg
+		_ = res.Scan(&msg.FromId, &msg.ToId, &msg.Message, &msg.Date)
+		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
+			msim_new_data_int("bm", 1),
+			msim_new_data_int("sesskey", ctx.sesskey),
+			msim_new_data_int("f", msg.FromId),
+			//	msim_new_data_int("date", msg.date),
+			msim_new_data_string("msg", msg.Message),
+		}))
+		util.Debug("MySpace -> handleClientOfflineEvents", "%d", msg.Date)
+	}
+	res.Close()
+	res2, _ := util.GetDatabaseHandle().Query("DELETE from offlinemsgs WHERE to_id= ?", client.Account.UserId)
+	res2.Close()
 }
 
 // Status Messages
@@ -219,58 +303,6 @@ func handleClientPacketDelBuddy(client *global.Client, packet []byte) {
 	}
 }
 
-func handleClientOfflineEvents(client *global.Client, ctx *msim_context) {
-	for i := 0; i < len(global.Clients); i++ {
-		if global.Clients[i].Account.UserId != client.Account.UserId {
-			res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE from_id= ?", client.Account.UserId)
-			for res.Next() {
-				var msg global.Contact
-				_ = res.Scan(&msg.FromId, &msg.ToId)
-				if global.Clients[i].Account.UserId == msg.ToId {
-					res2, _ := util.GetDatabaseHandle().Query("SELECT COUNT(*) from contacts WHERE from_id= ? AND to_id= ?", global.Clients[i].Account.UserId, client.Account.UserId)
-					res2.Next()
-					var count int
-					res2.Scan(&count)
-					res2.Close()
-					if count > 0 {
-						util.WriteTraffic(global.Clients[i].Connection, buildDataPacket([]msim_data_pair{
-							msim_new_data_int("bm", 100),
-							msim_new_data_int("f", client.Account.UserId),
-							msim_new_data_string("msg", fmt.Sprintf("|s|%d|ss|%s", ctx.statuscode, ctx.statusmessage)),
-							//msim_new_data_string("msg", "|s|"+ctx.StatusCode+"|ss|"+client.StatusText),
-						}))
-						util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
-							msim_new_data_int("bm", 100),
-							msim_new_data_int("f", global.Clients[i].Account.UserId),
-							msim_new_data_string("msg", fmt.Sprintf("|s|%d|ss|%s", users_context[i].statuscode, users_context[i].statusmessage)),
-							//msim_new_data_string("msg", "|s|"+Msim_Clients[i].StatusCode+"|ss|"+Msim_Clients[i].StatusText),
-						}))
-					}
-				}
-			}
-			res.Close()
-		}
-	}
-
-	//offline messages
-	res, _ := util.GetDatabaseHandle().Query("SELECT * from offlinemsgs WHERE to_id= ?", client.Account.UserId)
-	for res.Next() {
-		var msg global.OfflineMsg
-		_ = res.Scan(&msg.FromId, &msg.ToId, &msg.Message, &msg.Date)
-		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
-			msim_new_data_int("bm", 1),
-			msim_new_data_int("sesskey", ctx.sesskey),
-			msim_new_data_int("f", msg.FromId),
-			//	msim_new_data_int("date", msg.date),
-			msim_new_data_string("msg", msg.Message),
-		}))
-		util.Debug("MySpace -> handleClientOfflineEvents", "%d", msg.Date)
-	}
-	res.Close()
-	res2, _ := util.GetDatabaseHandle().Query("DELETE from offlinemsgs WHERE to_id= ?", client.Account.UserId)
-	res2.Close()
-}
-
 // bm type 1
 func handleClientPacketBuddyInstantMessage(client *global.Client, ctx *msim_context, packet []byte) {
 	t, _ := strconv.Atoi(findValueFromKey("t", packet))
@@ -294,6 +326,256 @@ func handleClientPacketBuddyInstantMessage(client *global.Client, ctx *msim_cont
 			res.Close()
 		}
 	}
+}
+
+// persist 1;0;1 get_contact_information
+func handleClientPacketGetContactList(client *global.Client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+	util.Debug("MySpace -> handleClientPacketGetContactList", "Requested Contact List...")
+	res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE from_id=?", client.Account.UserId)
+	body := ""
+	for res.Next() {
+		var contact global.Contact
+		_ = res.Scan(&contact.FromId, &contact.ToId)
+
+		accountRow, _ := global.GetUserDataFromUserId(contact.ToId)
+		accountData, _ := getMySpaceDataByUserId(contact.ToId)
+
+		body += buildDataBody([]msim_data_pair{
+			msim_new_data_int("ContactID", accountRow.UserId),
+			msim_new_data_string("Headline", accountData.headline),
+			msim_new_data_int("Position", 1),                //TODO
+			msim_new_data_string("GroupName", "IM Friends"), //TODO
+			msim_new_data_int("Visibility", 1),
+			msim_new_data_string("ShowAvatar", "true"),
+			msim_new_data_string("AvatarUrl", escapeString(fmt.Sprintf("%s/pfp/id=%d.%s", pfproot, accountRow.UserId, accountData.avatartype))),
+			msim_new_data_int64("LastLogin", accountData.lastlogin),
+			msim_new_data_string("IMName", accountRow.Email),
+			msim_new_data_string("NickName", accountRow.Screenname),
+			msim_new_data_int("NameSelect", 0),
+			msim_new_data_string("OfflineMsg", "im offline"),
+			msim_new_data_int("SkyStatus", 0),
+		})
+	}
+	res.Close()
+	resp := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.UserId),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", body),
+	})
+	util.WriteTraffic(client.Connection, resp)
+}
+
+// persist 1;0;2 get_contact_information
+func handleClientPacketGetContactInformation(client *global.Client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+
+	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
+
+	util.Debug("MySpace -> handleClientPacketGetContactInformation", "Requesting Contact Information...")
+	parse, _ := strconv.Atoi(parsedbody[1])
+
+	accountRow, _ := global.GetUserDataFromUserId(parse)
+	accountData, _ := getMySpaceDataByUserId(parse)
+	res := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.UserId),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_int("ContactID", accountRow.UserId),
+			msim_new_data_string("Headline", accountData.headline),
+			msim_new_data_int("Position", 1),                 //TODO
+			msim_new_data_string("!GroupName", "IM Friends"), //TODO
+			msim_new_data_int("Visibility", 1),
+			msim_new_data_string("!ShowAvatar", "true"),
+			msim_new_data_string("!AvatarUrl", escapeString(fmt.Sprintf("%s/pfp/id=%d.%s", pfproot, accountRow.UserId, accountData.avatartype))),
+			msim_new_data_int("!NameSelect", 0),
+			msim_new_data_string("IMName", accountRow.Email),
+			msim_new_data_string("!NickName", accountRow.Screenname),
+		})),
+	})
+	util.WriteTraffic(client.Connection, res)
+}
+
+// Persist 1;1;4
+func handleClientPacketUserLookupIMAboutMyself(client *global.Client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+
+	parse := client.Account.UserId
+
+	accountRow, _ := global.GetUserDataFromUserId(parse)
+	accountData, _ := getMySpaceDataByUserId(parse)
+
+	res := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.UserId),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_int("UserID", accountRow.UserId),
+			msim_new_data_string("Sound", "true"),
+			msim_new_data_int("!PrivacyMode", 0),
+			msim_new_data_string("!ShowOnlyToList", "False"),
+			msim_new_data_int("!OfflineMessageMode", 2),
+			msim_new_data_string("Headline", accountData.headline),
+			msim_new_data_string("Avatarurl", escapeString(fmt.Sprintf("%s/pfp/id=%d.%s", pfproot, accountRow.UserId, accountData.avatartype))),
+			msim_new_data_int("Alert", 1),
+			msim_new_data_string("!ShowAvatar", "true"),
+			msim_new_data_string("IMName", accountRow.Screenname),
+			msim_new_data_int("!ClientVersion", 999),
+			msim_new_data_string("!AllowBrowse", "true"),
+			msim_new_data_string("IMLang", "English"),
+			msim_new_data_int("LangID", 8192),
+		})),
+	})
+	util.WriteTraffic(client.Connection, res)
+}
+
+// Persist 1;1;17
+func handleClientPacketUserLookupIMByUid(client *global.Client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+
+	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
+	parse, _ := strconv.Atoi(parsedbody[1])
+
+	accountRow, _ := global.GetUserDataFromUserId(parse)
+	accountData, _ := getMySpaceDataByUserId(parse)
+
+	res := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.UserId),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_int("UserID", accountRow.UserId),
+			msim_new_data_string("Sound", "true"),
+			msim_new_data_int("!PrivacyMode", 0),             // TODO
+			msim_new_data_string("!ShowOnlyToList", "False"), // TODO
+			msim_new_data_int("!OfflineMessageMode", 2),      // TODO
+			msim_new_data_string("Headline", accountData.headline),
+			msim_new_data_string("Avatarurl", escapeString(fmt.Sprintf("%s/pfp/id=%d.%s", pfproot, accountRow.UserId, accountData.avatartype))),
+			msim_new_data_int("Alert", 1),               //TODO
+			msim_new_data_string("!ShowAvatar", "true"), // TODO
+			msim_new_data_string("IMName", accountRow.Screenname),
+			msim_new_data_int("!ClientVersion", 999),
+			msim_new_data_string("!AllowBrowse", "true"), // TODO
+			msim_new_data_string("IMLang", "English"),
+			msim_new_data_int("LangID", 8192),
+		})),
+	})
+	util.WriteTraffic(client.Connection, res)
+}
+
+// persist 1;2;6
+// \persist\1\sesskey\7920\cmd\1\dsn\2\uid\1\lid\6\rid\8\body\\final\
+func handleClientPacketGetGroups(client *global.Client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+
+	util.Debug("MySpace -> handleClientPacketGetGroups", "Requesting Contact Groups")
+	res := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.UserId),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_int("GroupID", 21672248),
+			msim_new_data_string("GroupName", "IM Friends"),
+			msim_new_data_int("Position", 1),
+			msim_new_data_int("GroupFlag", 131073),
+		})),
+	})
+	util.WriteTraffic(client.Connection, res)
+}
+
+// Persist 1;4;3, 1;4;5
+func handleClientPacketUserLookupMySpaceByUid(client *global.Client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
+
+	parse, _ := strconv.Atoi(parsedbody[1])
+	accountRow, _ := global.GetUserDataFromUserId(parse)
+	accountData, _ := getMySpaceDataByUserId(parse)
+
+	util.Debug("MySpace -> handleClientPacketUserLookupMySpaceByUid", "%s/pfp/id=%d.%s", pfproot, accountRow.UserId, accountData.avatartype)
+
+	res := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.UserId),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_string("UserName", accountRow.Email),
+			msim_new_data_int("UserID", accountRow.UserId),
+			msim_new_data_string("ImageURL", escapeString(fmt.Sprintf("%s/pfp/id=%d.%s", pfproot, accountRow.UserId, accountData.avatartype))),
+			msim_new_data_string("DisplayName", accountRow.Screenname),
+			msim_new_data_string("BandName", accountData.bandname),
+			msim_new_data_string("SongName", accountData.songname),
+			msim_new_data_int("Age", accountData.age),
+			msim_new_data_string("Gender", accountData.gender),
+			msim_new_data_string("Location", accountData.location),
+			msim_new_data_int("!TotalFriends", 1), //TODO
+		})),
+	})
+	util.WriteTraffic(client.Connection, res)
+}
+
+// Persist 1;5;7
+func handleClientPacketUserLookupMySpaceByUsernameOrEmail(client *global.Client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+	dsn := findValueFromKey("dsn", packet)
+	lid := findValueFromKey("lid", packet)
+
+	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
+	accountRow, _ := global.GetUserDataFromEmail(parsedbody[1])
+	accountData, _ := getMySpaceDataByEmail(parsedbody[1])
+
+	res := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.UserId),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", dsn),
+		msim_new_data_string("lid", lid),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_string(parsedbody[0], parsedbody[1]),
+			msim_new_data_int("UserID", accountRow.UserId),
+			msim_new_data_string("ImageURL", escapeString(fmt.Sprintf("%s/pfp/id=%d.%s", pfproot, accountRow.UserId, accountData.avatartype))),
+			msim_new_data_string("DisplayName", accountRow.Screenname),
+			msim_new_data_string("BandName", accountData.bandname),
+			msim_new_data_string("SongName", accountData.songname),
+			msim_new_data_int("Age", accountData.age),
+			msim_new_data_string("Gender", accountData.gender),
+			msim_new_data_string("Location", accountData.location),
+		})),
+	})
+	util.WriteTraffic(client.Connection, res)
 }
 
 var buf []byte
@@ -320,7 +602,9 @@ func handleClientPacketChangePicture(client *global.Client, packet []byte) {
 		} else {
 			pfpType = "jpeg"
 		}
-		res, _ := util.GetDatabaseHandle().Query("UPDATE accounts SET avatar= ?, avatartype= ? WHERE id= ?", base64.StdEncoding.EncodeToString(buf), pfpType, client.Account.Uid)
+		res, _ := util.GetDatabaseHandle().Query("UPDATE upload SET avatar= ? WHERE id= ?", base64.StdEncoding.EncodeToString(buf), client.Account.UserId)
+		res.Close()
+		res, _ = util.GetDatabaseHandle().Query("UPDATE myspace SET avatartype= ? WHERE id= ?", pfpType, client.Account.UserId)
 		res.Close()
 		buf = nil
 	}
@@ -334,240 +618,4 @@ func handleClientPacketChangePicture(client *global.Client, packet []byte) {
 		msim_new_data_string("rid", findValueFromKey("rid", packet)),
 		msim_new_data_dictonary("body", ""),
 	}))
-}
-
-// persist 1;0;1 get_contact_information
-func handleClientPacketGetContactList(client *global.Client, packet []byte) {
-	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
-	dsn := findValueFromKey("dsn", packet)
-	lid := findValueFromKey("lid", packet)
-	util.Debug("MySpace -> handleClientPacketGetContactList", "Requested Contact List...")
-	res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE fromid=?", client.Account.UserId)
-	body := ""
-	for res.Next() {
-		var contact global.Contact
-		_ = res.Scan(&contact.FromId, &contact.ToId)
-		accountRow := global.GetUserDataFromUserId(contact.ToId)
-		body += buildDataBody([]msim_data_pair{
-			msim_new_data_int("ContactID", accountRow.UserId),
-			msim_new_data_string("Headline", accountRow.headline),
-			msim_new_data_int("Position", 1),                //TODO
-			msim_new_data_string("GroupName", "IM Friends"), //TODO
-			msim_new_data_int("Visibility", 1),
-			msim_new_data_string("ShowAvatar", "true"),
-			msim_new_data_string("AvatarUrl", escapeString(pfproot+"/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
-			msim_new_data_int64("LastLogin", accountRow.lastlogin),
-			msim_new_data_string("IMName", accountRow.Username),
-			msim_new_data_string("NickName", accountRow.Screenname),
-			msim_new_data_int("NameSelect", 0),
-			msim_new_data_string("OfflineMsg", "im offline"),
-			msim_new_data_int("SkyStatus", 0),
-		})
-	}
-	res.Close()
-	resp := buildDataPacket([]msim_data_pair{
-		msim_new_data_boolean("persistr", true),
-		msim_new_data_int("uid", client.Account.Uid),
-		msim_new_data_int("cmd", cmd^256),
-		msim_new_data_string("dsn", dsn),
-		msim_new_data_string("lid", lid),
-		msim_new_data_string("rid", findValueFromKey("rid", packet)),
-		msim_new_data_dictonary("body", body),
-	})
-	util.WriteTraffic(client.Connection, resp)
-}
-
-// persist 1;0;2 get_contact_information
-func handleClientPacketGetContactInformation(client *global.Client, packet []byte) {
-	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
-	dsn := findValueFromKey("dsn", packet)
-	lid := findValueFromKey("lid", packet)
-
-	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
-
-	util.Debug("MySpace -> handleClientPacketGetContactInformation", "Requesting Contact Information...")
-	parse, _ := strconv.Atoi(parsedbody[1])
-
-	accountRow, _ := GetUserDataById(parse)
-	res := buildDataPacket([]msim_data_pair{
-		msim_new_data_boolean("persistr", true),
-		msim_new_data_int("uid", client.Account.Uid),
-		msim_new_data_int("cmd", cmd^256),
-		msim_new_data_string("dsn", dsn),
-		msim_new_data_string("lid", lid),
-		msim_new_data_string("rid", findValueFromKey("rid", packet)),
-		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
-			msim_new_data_int("ContactID", accountRow.Uid),
-			msim_new_data_string("Headline", accountRow.headline),
-			msim_new_data_int("Position", 1),                 //TODO
-			msim_new_data_string("!GroupName", "IM Friends"), //TODO
-			msim_new_data_int("Visibility", 1),
-			msim_new_data_string("!ShowAvatar", "true"),
-			msim_new_data_string("!AvatarUrl", escapeString(pfproot+"/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
-			msim_new_data_int("!NameSelect", 0),
-			msim_new_data_string("IMName", accountRow.Username),
-			msim_new_data_string("!NickName", accountRow.Screenname),
-		})),
-	})
-	util.WriteTraffic(client.Connection, res)
-}
-
-// Persist 1;1;4
-func handleClientPacketUserLookupIMAboutMyself(client *global.Client, packet []byte) {
-	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
-	dsn := findValueFromKey("dsn", packet)
-	lid := findValueFromKey("lid", packet)
-
-	parse := client.Account.Uid
-
-	accountRow, _ := GetUserDataById(parse)
-	res := buildDataPacket([]msim_data_pair{
-		msim_new_data_boolean("persistr", true),
-		msim_new_data_int("uid", client.Account.Uid),
-		msim_new_data_int("cmd", cmd^256),
-		msim_new_data_string("dsn", dsn),
-		msim_new_data_string("lid", lid),
-		msim_new_data_string("rid", findValueFromKey("rid", packet)),
-		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
-			msim_new_data_int("UserID", accountRow.Uid),
-			msim_new_data_string("Sound", "true"),
-			msim_new_data_int("!PrivacyMode", 0),
-			msim_new_data_string("!ShowOnlyToList", "False"),
-			msim_new_data_int("!OfflineMessageMode", 2),
-			msim_new_data_string("Headline", accountRow.headline),
-			msim_new_data_string("Avatarurl", escapeString(pfproot+"/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
-			msim_new_data_int("Alert", 1),
-			msim_new_data_string("!ShowAvatar", "true"),
-			msim_new_data_string("IMName", accountRow.Screenname),
-			msim_new_data_int("!ClientVersion", 999),
-			msim_new_data_string("!AllowBrowse", "true"),
-			msim_new_data_string("IMLang", "English"),
-			msim_new_data_int("LangID", 8192),
-		})),
-	})
-	util.WriteTraffic(client.Connection, res)
-}
-
-// Persist 1;1;17
-func handleClientPacketUserLookupIMByUid(client *global.Client, packet []byte) {
-	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
-	dsn := findValueFromKey("dsn", packet)
-	lid := findValueFromKey("lid", packet)
-
-	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
-	parse, _ := strconv.Atoi(parsedbody[1])
-
-	accountRow, _ := GetUserDataById(parse)
-	res := buildDataPacket([]msim_data_pair{
-		msim_new_data_boolean("persistr", true),
-		msim_new_data_int("uid", client.Account.Uid),
-		msim_new_data_int("cmd", cmd^256),
-		msim_new_data_string("dsn", dsn),
-		msim_new_data_string("lid", lid),
-		msim_new_data_string("rid", findValueFromKey("rid", packet)),
-		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
-			msim_new_data_int("UserID", accountRow.Uid),
-			msim_new_data_string("Sound", "true"),
-			msim_new_data_int("!PrivacyMode", 0),             // TODO
-			msim_new_data_string("!ShowOnlyToList", "False"), // TODO
-			msim_new_data_int("!OfflineMessageMode", 2),      // TODO
-			msim_new_data_string("Headline", accountRow.headline),
-			msim_new_data_string("Avatarurl", escapeString(pfproot+"/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
-			msim_new_data_int("Alert", 1),               //TODO
-			msim_new_data_string("!ShowAvatar", "true"), // TODO
-			msim_new_data_string("IMName", accountRow.Screenname),
-			msim_new_data_int("!ClientVersion", 999),
-			msim_new_data_string("!AllowBrowse", "true"), // TODO
-			msim_new_data_string("IMLang", "English"),
-			msim_new_data_int("LangID", 8192),
-		})),
-	})
-	util.WriteTraffic(client.Connection, res)
-}
-
-// persist 1;2;6
-// \persist\1\sesskey\7920\cmd\1\dsn\2\uid\1\lid\6\rid\8\body\\final\
-func handleClientPacketGetGroups(client *global.Client, packet []byte) {
-	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
-	dsn := findValueFromKey("dsn", packet)
-	lid := findValueFromKey("lid", packet)
-
-	util.Debug("MySpace -> handleClientPacketGetGroups", "Requesting Contact Groups")
-	res := buildDataPacket([]msim_data_pair{
-		msim_new_data_boolean("persistr", true),
-		msim_new_data_int("uid", client.Account.Uid),
-		msim_new_data_int("cmd", cmd^256),
-		msim_new_data_string("dsn", dsn),
-		msim_new_data_string("lid", lid),
-		msim_new_data_string("rid", findValueFromKey("rid", packet)),
-		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
-			msim_new_data_int("GroupID", 21672248),
-			msim_new_data_string("GroupName", "IM Friends"),
-			msim_new_data_int("Position", 1),
-			msim_new_data_int("GroupFlag", 131073),
-		})),
-	})
-	util.WriteTraffic(client.Connection, res)
-}
-
-// Persist 1;4;3, 1;4;5
-func handleClientPacketUserLookupMySpaceByUid(client *global.Client, packet []byte) {
-	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
-	dsn := findValueFromKey("dsn", packet)
-	lid := findValueFromKey("lid", packet)
-	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
-
-	parse, _ := strconv.Atoi(parsedbody[1])
-	accountRow, _ := GetUserDataById(parse)
-	res := buildDataPacket([]msim_data_pair{
-		msim_new_data_boolean("persistr", true),
-		msim_new_data_int("uid", client.Account.Uid),
-		msim_new_data_int("cmd", cmd^256),
-		msim_new_data_string("dsn", dsn),
-		msim_new_data_string("lid", lid),
-		msim_new_data_string("rid", findValueFromKey("rid", packet)),
-		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
-			msim_new_data_string("UserName", accountRow.Username),
-			msim_new_data_int("UserID", accountRow.Uid),
-			msim_new_data_string("ImageURL", escapeString(pfproot+"/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
-			msim_new_data_string("DisplayName", accountRow.Screenname),
-			msim_new_data_string("BandName", accountRow.BandName),
-			msim_new_data_string("SongName", accountRow.SongName),
-			msim_new_data_string("Age", accountRow.Age),
-			msim_new_data_string("Gender", accountRow.Gender),
-			msim_new_data_string("Location", accountRow.Location),
-			msim_new_data_int("!TotalFriends", 1), //TODO
-		})),
-	})
-	util.WriteTraffic(client.Connection, res)
-}
-
-// Persist 1;5;7
-func handleClientPacketUserLookupMySpaceByUsernameOrEmail(client *global.Client, packet []byte) {
-	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
-	dsn := findValueFromKey("dsn", packet)
-	lid := findValueFromKey("lid", packet)
-
-	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
-	accountRow, _ := getUserData(parsedbody[1])
-	res := buildDataPacket([]msim_data_pair{
-		msim_new_data_boolean("persistr", true),
-		msim_new_data_int("uid", client.Account.Uid),
-		msim_new_data_int("cmd", cmd^256),
-		msim_new_data_string("dsn", dsn),
-		msim_new_data_string("lid", lid),
-		msim_new_data_string("rid", findValueFromKey("rid", packet)),
-		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
-			msim_new_data_string(parsedbody[0], parsedbody[1]),
-			msim_new_data_int("UserID", accountRow.Uid),
-			msim_new_data_string("ImageURL", escapeString(pfproot+"/pfp/id="+strconv.Itoa(accountRow.Uid)+"."+accountRow.avatartype)),
-			msim_new_data_string("DisplayName", accountRow.Screenname),
-			msim_new_data_string("BandName", accountRow.BandName),
-			msim_new_data_string("SongName", accountRow.SongName),
-			msim_new_data_string("Age", accountRow.Age),
-			msim_new_data_string("Gender", accountRow.Gender),
-			msim_new_data_string("Location", accountRow.Location),
-		})),
-	})
-	util.WriteTraffic(client.Connection, res)
 }

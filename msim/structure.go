@@ -10,7 +10,6 @@ type msim_context struct {
 	sesskey       int
 	statuscode    int
 	statusmessage string
-	details       msim_user_details
 }
 
 type msim_user_details struct {

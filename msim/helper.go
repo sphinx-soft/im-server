@@ -86,24 +86,25 @@ func generateSessionKey() int {
 func getMySpaceDataByEmail(email string) (msim_user_details, bool) {
 	var user msim_user_details
 
-	acc := global.GetUserDataFromEmail(email)
+	acc, _ := global.GetUserDataFromEmail(email)
 
 	row, err := util.GetDatabaseHandle().Query("SELECT * from myspace WHERE id= ?", acc.UserId)
 	if err != nil {
 		util.Error(err.Error())
 		return user, true
 	}
+
 	row.Next()
-	row.Scan(&user.userid)
+	row.Scan(&user.userid, &user.avatartype, &user.bandname, &user.songname, &user.age, &user.gender, &user.location, &user.headline, &user.lastlogin)
 	row.Close()
 
-	return user, false
+	return user, true
 }
 
 func getMySpaceDataByUserId(uid int) (msim_user_details, bool) {
 	var user msim_user_details
 
-	acc := global.GetUserDataFromUserId(uid)
+	acc, _ := global.GetUserDataFromUserId(uid)
 
 	row, err := util.GetDatabaseHandle().Query("SELECT * from myspace WHERE id= ?", acc.UserId)
 	if err != nil {
@@ -111,10 +112,10 @@ func getMySpaceDataByUserId(uid int) (msim_user_details, bool) {
 		return user, true
 	}
 	row.Next()
-	row.Scan(&user.userid)
+	row.Scan(&user.userid, &user.avatartype, &user.bandname, &user.songname, &user.age, &user.gender, &user.location, &user.headline, &user.lastlogin)
 	row.Close()
 
-	return user, false
+	return user, true
 }
 
 func escapeString(data string) string {
@@ -130,4 +131,9 @@ func unescapeString(data string) string {
 
 func addUserContext(ctx *msim_context) {
 	users_context = append(users_context, ctx)
+}
+
+func removeUserContext(s []*msim_context, i int) []*msim_context {
+	s[i] = s[len(s)-1]
+	return s[:len(s)-1]
 }

@@ -24,7 +24,7 @@ func GetClient(username string) *Client {
 	return nil
 }
 
-func GetUserDataFromEmail(email string) Account {
+func GetUserDataFromEmail(email string) (Account, bool) {
 
 	var acc Account
 
@@ -32,16 +32,17 @@ func GetUserDataFromEmail(email string) Account {
 
 	if err != nil {
 		util.Error("Failed to get email userdata: %s", err.Error())
+		return acc, false
 	}
 
 	row.Next()
 	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber)
 	row.Close()
 
-	return acc
+	return acc, true
 }
 
-func GetUserDataFromUsername(username string) Account {
+func GetUserDataFromUsername(username string) (Account, bool) {
 
 	var acc Account
 
@@ -51,16 +52,17 @@ func GetUserDataFromUsername(username string) Account {
 
 	if err != nil {
 		util.Error("Failed to get username userdata: %s", err.Error())
+		return acc, false
 	}
 
 	row.Next()
 	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber)
 	row.Close()
 
-	return acc
+	return acc, true
 }
 
-func GetUserDataFromIcqNumber(uin int) Account {
+func GetUserDataFromIcqNumber(uin int) (Account, bool) {
 
 	var acc Account
 
@@ -68,16 +70,17 @@ func GetUserDataFromIcqNumber(uin int) Account {
 
 	if err != nil {
 		util.Error("Failed to get icq number userdata: %s", err.Error())
+		return acc, false
 	}
 
 	row.Next()
 	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber)
 	row.Close()
 
-	return acc
+	return acc, true
 }
 
-func GetUserDataFromUserId(uid int) Account {
+func GetUserDataFromUserId(uid int) (Account, bool) {
 
 	var acc Account
 
@@ -85,11 +88,30 @@ func GetUserDataFromUserId(uid int) Account {
 
 	if err != nil {
 		util.Error("Failed to get icq number userdata: %s", err.Error())
+		return acc, false
 	}
 
 	row.Next()
 	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber)
 	row.Close()
 
-	return acc
+	return acc, true
+}
+
+func GetUploadDataFromUserId(uid int) (Upload, bool) {
+
+	var upl Upload
+
+	row, err := util.GetDatabaseHandle().Query("SELECT * from upload WHERE id= ?", uid)
+
+	if err != nil {
+		util.Error("Failed to get data userdata: %s", err.Error())
+		return upl, false
+	}
+
+	row.Next()
+	row.Scan(&upl.UserId, &upl.Avatar)
+	row.Close()
+
+	return upl, true
 }
