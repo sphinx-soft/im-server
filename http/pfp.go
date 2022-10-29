@@ -17,7 +17,7 @@ func HandlePFP(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		io.WriteString(w, string("err1"))
-		util.Error("Error converting id to an integer")
+		util.Error("WebAPI -> HandleProfilePictures", "Error converting id to an integer")
 		return
 	}
 
@@ -26,23 +26,23 @@ func HandlePFP(w http.ResponseWriter, r *http.Request) {
 
 	if !err4 {
 		io.WriteString(w, string("err4"))
-		util.Error("error getting user object from database (upload)")
+		util.Error("WebAPI -> HandleProfilePictures", "error getting user object from database (upload)")
 		return
 	}
 
 	if !err2 {
 		io.WriteString(w, string("err2"))
-		util.Error("error getting user object from database (userdata)")
+		util.Error("WebAPI -> HandleProfilePictures", "error getting user object from database (userdata)")
 		return
 	}
 
 	res, err := base64.StdEncoding.DecodeString(upl.Avatar)
 	if err != nil {
 		io.WriteString(w, string("err3"))
-		util.Error("Error decoding avatar")
+		util.Error("WebAPI -> HandleProfilePictures", "Error decoding avatar")
 		return
 	}
 
-	util.Debug("WebAPI", "Provided avatar for user %s", acc.Email)
+	util.Debug("WebAPI -> HandleProfilePictures", "Provided avatar for user %s", acc.Email)
 	w.Write(res)
 }

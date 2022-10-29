@@ -38,19 +38,20 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 
 	loginpacket, success := util.ReadTraffic(client.Connection)
 	if !success {
-		util.Error("Failed to read Login2 Data Packet!")
+		util.Error("MySpace -> handleClientAuthentication", "Failed to read Login2 Data Packet!")
 		return false
 	}
 
 	username := findValueFromKey("username", loginpacket)
 	version := findValueFromKey("clientver", loginpacket)
 
-	acc, _ := global.GetUserDataFromEmail(username)
+	acc, _ := global.GetUserDataFromUsername(username)
 	client.Account = acc
+	client.Protocol = identifyProtocolVersion(version)
 
 	uid := acc.UserId
 	screenname := acc.Screenname
-	password := acc.Password
+	password := util.DecryptAES(util.GetAESKey(), acc.Password)
 
 	byte_nc2 := make([]byte, 32)
 	byte_rc4_key := make([]byte, 16)
@@ -76,7 +77,7 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 	packetrc4data := findValueFromKey("response", loginpacket)
 	byte_rc4_data, err := base64.StdEncoding.DecodeString(packetrc4data)
 	if err != nil {
-		util.Error("Invalid base64 provided at login packet.")
+		util.Error("MySpace -> handleClientAuthentication", "Invalid base64 provided at login packet.")
 		return false
 	}
 	rc4data := util.DecryptRC4(byte_rc4_key, byte_rc4_data)
@@ -84,7 +85,7 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 	if strings.Contains(string(rc4data), username) {
 		res, _ := util.GetDatabaseHandle().Query("UPDATE myspace SET lastlogin = ? WHERE id= ?", time.Now().UnixNano(), acc.UserId)
 		res.Close()
-		util.Log("MySpaceIM", "Client Authenticated! | Username: %s | Screenname: %s | Version: 1.0.%s.0", username, screenname, version)
+		util.Log("MySpaceIM", "Client Authenticated! -> Username: %s, Screenname: %s, Version: 1.0.%s.0, Protocol Version: %s", username, screenname, version, client.Protocol)
 		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 			msim_new_data_string("lc", "2"),
 			msim_new_data_int("sesskey", ctx.sesskey),
@@ -192,6 +193,14 @@ func handleClientHandleOfflineMessages(client *global.Client, ctx *msim_context)
 	res.Close()
 	res2, _ := util.GetDatabaseHandle().Query("DELETE from offlinemsgs WHERE to_id= ?", client.Account.UserId)
 	res2.Close()
+}
+
+func handleClientLogoutRequest(data string) bool {
+	if strings.HasPrefix(data, "\\logout") {
+		return true
+	} else {
+		return false
+	}
 }
 
 // Status Messages

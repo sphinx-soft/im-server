@@ -17,7 +17,7 @@ func port1863Handler() {
 		tcpClient, err := tcpServer.Accept()
 
 		if err != nil {
-			util.Error("Failed to accept Client! ", err.Error())
+			util.Error("Port 1836 Handler", "Failed to accept Client!", err.Error())
 		} else {
 			util.Debug("Port 1836 Handler", "Accepted Client")
 		}

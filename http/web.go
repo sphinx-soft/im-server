@@ -14,7 +14,7 @@ func RunWebServer(port int) {
 	util.Log("HTTP Listener", "Listening on 0.0.0.0:%d", port)
 	err := http.ListenAndServe(":"+strconv.Itoa(port), nil)
 	if err != nil {
-		util.Error("Error setting up http server!")
+		util.Error("WebAPI -> RunWebServer", "Error setting up http server!")
 		return
 	}
 }

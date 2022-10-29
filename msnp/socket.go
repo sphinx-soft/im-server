@@ -48,9 +48,15 @@ func HandleNotification() {
 				}
 			}
 
-			if !success {
+			if !success || handleClientLogoutRequest(string(data)) {
 				break
 			}
+		}
+
+		if client.Account.Email != "" {
+			util.Log("MSN Messenger", "Client Disconnected -> Email: %s", client.Account.Email)
+		} else {
+			util.Log("MSN Messenger", "Client Disconnected -> Email: Unknown")
 		}
 
 		for i := 0; i < len(global.Clients); i++ {
@@ -84,7 +90,7 @@ func HandleDispatch(client *global.Client, firstread string) {
 	addUserContext(&ctx)
 
 	// Send first response command to MSN Client, Requesting INF Data
-	if !handleProtocolVersionRequest(client, firstread) {
+	if !handleClientProtocolVersionRequest(client, firstread) {
 		util.Debug("MSNP -> HandleDispatch", "Unsupported MSNP Version requested, closing...")
 		return
 	}
@@ -106,6 +112,12 @@ func HandleDispatch(client *global.Client, firstread string) {
 		if !success {
 			break
 		}
+	}
+
+	if client.Account.Email != "" {
+		util.Log("MSN Messenger", "Client Disconnected -> Email: %s", client.Account.Email)
+	} else {
+		util.Log("MSN Messenger", "Client Disconnected -> Email: Unknown")
 	}
 
 	for i := 0; i < len(global.Clients); i++ {

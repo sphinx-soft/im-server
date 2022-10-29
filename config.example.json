@@ -1,4 +1,5 @@
 {
     "root":"http://{your host here (either localhost or remote url/ip)}",
-    "dblogin":"username:password"
+    "dblogin":"username:password",
+    "aeskey":"24 char length key"
 }

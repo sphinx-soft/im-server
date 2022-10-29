@@ -31,3 +31,7 @@ func GetRootUrl() string {
 func GetDatabaseLogin() string {
 	return fmt.Sprintf("%s", readJsonConfig()["dblogin"])
 }
+
+func GetAESKey() string {
+	return fmt.Sprintf("%s", readJsonConfig()["aeskey"])
+}

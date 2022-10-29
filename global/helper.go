@@ -3,6 +3,7 @@ package global
 import (
 	"fmt"
 	"phantom/util"
+	"strings"
 )
 
 func AddClient(client *Client) {
@@ -38,6 +39,7 @@ func GetUserDataFromEmail(email string) (Account, bool) {
 	row.Next()
 	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber)
 	row.Close()
+	acc.Username = strings.Replace(email, "@phantom-im.xyz", "", -1)
 
 	return acc, true
 }
@@ -58,6 +60,7 @@ func GetUserDataFromUsername(username string) (Account, bool) {
 	row.Next()
 	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber)
 	row.Close()
+	acc.Username = username
 
 	return acc, true
 }
@@ -76,6 +79,7 @@ func GetUserDataFromIcqNumber(uin int) (Account, bool) {
 	row.Next()
 	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber)
 	row.Close()
+	acc.Username = strings.Replace(acc.Email, "@phantom-im.xyz", "", -1)
 
 	return acc, true
 }
@@ -94,6 +98,7 @@ func GetUserDataFromUserId(uid int) (Account, bool) {
 	row.Next()
 	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber)
 	row.Close()
+	acc.Username = strings.Replace(acc.Email, "@phantom-im.xyz", "", -1)
 
 	return acc, true
 }

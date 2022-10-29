@@ -11,8 +11,8 @@ func Log(prefix string, text string, format ...any) {
 	fmt.Println()
 }
 
-func Error(text string, format ...any) {
-	Log("Error", text, format...)
+func Error(prefix string, text string, format ...any) {
+	Log("Error", fmt.Sprintf("[\033[31m%s\033[0m] %s", prefix, text), format...)
 }
 
 func Debug(prefix string, text string, format ...any) {

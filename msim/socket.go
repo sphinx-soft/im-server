@@ -118,14 +118,14 @@ func HandleClients(client *global.Client) {
 			}
 		}
 
-		if !success {
+		if !success || handleClientLogoutRequest(string(data)) {
 			break
 		}
 	}
 
-	util.Log("MySpaceIM", "Client Disconnected! | Screenname: %s", client.Account.Screenname)
-
 	handleClientBroadcastSignOffStatus(client, &ctx)
+
+	util.Log("MySpaceIM", "Client Disconnected -> Username: %s", client.Account.Username)
 
 	for i := 0; i < len(global.Clients); i++ {
 		if global.Clients[i].Account.Email == client.Account.Email {

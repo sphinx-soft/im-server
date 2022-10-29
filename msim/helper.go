@@ -90,7 +90,7 @@ func getMySpaceDataByEmail(email string) (msim_user_details, bool) {
 
 	row, err := util.GetDatabaseHandle().Query("SELECT * from myspace WHERE id= ?", acc.UserId)
 	if err != nil {
-		util.Error(err.Error())
+		util.Error("MySpace -> getMySpaceDataByEmail", err.Error())
 		return user, true
 	}
 
@@ -108,7 +108,7 @@ func getMySpaceDataByUserId(uid int) (msim_user_details, bool) {
 
 	row, err := util.GetDatabaseHandle().Query("SELECT * from myspace WHERE id= ?", acc.UserId)
 	if err != nil {
-		util.Error(err.Error())
+		util.Error("MySpace -> getMySpaceDataByUserId", err.Error())
 		return user, true
 	}
 	row.Next()
@@ -136,4 +136,24 @@ func addUserContext(ctx *msim_context) {
 func removeUserContext(s []*msim_context, i int) []*msim_context {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
+}
+
+func identifyProtocolVersion(clientver string) string {
+	ver, _ := strconv.Atoi(clientver)
+
+	if ver <= 253 {
+		return "MSIMv1"
+	} else if ver > 253 && ver <= 366 {
+		return "MSIMv2"
+	} else if ver > 366 && ver <= 595 {
+		return "MSIMv3"
+	} else if ver > 595 && ver <= 673 {
+		return "MSIMv4"
+	} else if ver > 673 && ver <= 697 {
+		return "MSIMv5"
+	} else if ver > 697 && ver <= 812 {
+		return "MSIMv6"
+	}
+
+	return ""
 }
