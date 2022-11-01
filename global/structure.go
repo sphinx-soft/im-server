@@ -11,12 +11,13 @@ type Client struct {
 }
 
 type Account struct {
-	UserId     int
-	Email      string
-	Username   string
-	Password   string
-	Screenname string
-	ICQNumber  int
+	UserId           int
+	Email            string
+	Username         string
+	Password         string
+	Screenname       string
+	ICQNumber        int
+	RegistrationTime int
 }
 
 type Contact struct {

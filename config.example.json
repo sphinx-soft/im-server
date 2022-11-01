@@ -1,5 +1,6 @@
 {
-    "root":"http://{your host here (either localhost or remote url/ip)}",
+    "maildomain":"@{your domain here}",
+    "root":"{your host here (either localhost or remote url/ip)}",
     "dblogin":"username:password",
-    "aeskey":"24 char length key"
+    "aeskey":"16/24/32 char length key"
 }

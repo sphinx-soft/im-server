@@ -32,7 +32,7 @@ are 0 for ints when undefined thus solving my issue where
 offset is not added when not defined additionally
 */
 
-func findValueFromData(data_search string, packet string, offset ...int) string {
+func findValueFromData(data_search string, packet string, offset int) string {
 
 	decode := strings.Replace(packet, "\r\n", "", -1)
 	splits := strings.Split(decode, " ")
@@ -41,7 +41,7 @@ func findValueFromData(data_search string, packet string, offset ...int) string 
 		if splits[ix] == data_search {
 			//return splits[ix+1+len(offset)]
 			//string(bytes.Trim([]byte(splits[1]), "\x00"))
-			return string(bytes.Trim([]byte(splits[ix+1+len(offset)]), "\x00"))
+			return string(bytes.Trim([]byte(splits[ix+1+offset]), "\x00"))
 		}
 	}
 
@@ -64,6 +64,15 @@ func addUserContext(ctx *msnp_context) {
 }
 
 func removeUserContext(s []*msnp_context, i int) []*msnp_context {
+	s[i] = s[len(s)-1]
+	return s[:len(s)-1]
+}
+
+func addSwitchboardContext(ctx *msnp_switchboard_context) {
+	msn_switchboard_list = append(msn_switchboard_list, ctx)
+}
+
+func removeSwitchboardContext(s []*msnp_switchboard_context, i int) []*msnp_switchboard_context {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
 }

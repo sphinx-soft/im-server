@@ -35,3 +35,7 @@ func GetDatabaseLogin() string {
 func GetAESKey() string {
 	return fmt.Sprintf("%s", readJsonConfig()["aeskey"])
 }
+
+func GetMailDomain() string {
+	return fmt.Sprintf("%s", readJsonConfig()["maildomain"])
+}

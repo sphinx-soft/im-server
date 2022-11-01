@@ -60,6 +60,9 @@ func main() {
 	util.Log("Handler", "Launched Handler for MSNP Notification")
 	go msnp.HandleNotification()
 
+	util.Log("Handler", "Launched Handler for MSNP Switchboard")
+	go msnp.HandleSwitchboard()
+
 	util.Log("Handler", "Launched Handler for HTTP Server")
 	http.RunWebServer(80)
 }

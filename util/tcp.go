@@ -13,7 +13,7 @@ func CreateListener(port int) net.Listener {
 	tcpServer, err := net.Listen("tcp", "0.0.0.0"+":"+strconv.Itoa(port))
 
 	if err != nil {
-		Error("Failed to start listener! %s", err.Error())
+		Error("TCP Listener", "Failed to start listener! %s", err.Error())
 		os.Exit(1)
 	}
 

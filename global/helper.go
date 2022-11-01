@@ -32,14 +32,14 @@ func GetUserDataFromEmail(email string) (Account, bool) {
 	row, err := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE email= ?", email)
 
 	if err != nil {
-		util.Error("Failed to get email userdata: %s", err.Error())
+		util.Error("Fetch Userdata -> Email", "Failed to get email userdata: %s", err.Error())
 		return acc, false
 	}
 
 	row.Next()
-	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber)
+	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber, &acc.RegistrationTime)
 	row.Close()
-	acc.Username = strings.Replace(email, "@phantom-im.xyz", "", -1)
+	acc.Username = strings.Replace(email, util.GetMailDomain(), "", -1)
 
 	return acc, true
 }
@@ -48,17 +48,17 @@ func GetUserDataFromUsername(username string) (Account, bool) {
 
 	var acc Account
 
-	user := fmt.Sprintf("%s@phantom-im.xyz", username)
+	user := fmt.Sprintf("%s%s", username, util.GetMailDomain())
 
 	row, err := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE email= ?", user)
 
 	if err != nil {
-		util.Error("Failed to get username userdata: %s", err.Error())
+		util.Error("Fetch Userdata -> Username", "Failed to get username userdata: %s", err.Error())
 		return acc, false
 	}
 
 	row.Next()
-	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber)
+	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber, &acc.RegistrationTime)
 	row.Close()
 	acc.Username = username
 
@@ -72,14 +72,14 @@ func GetUserDataFromIcqNumber(uin int) (Account, bool) {
 	row, err := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE uin= ?", uin)
 
 	if err != nil {
-		util.Error("Failed to get icq number userdata: %s", err.Error())
+		util.Error("Fetch Userdata -> ICQ Number", "Failed to get icq number userdata: %s", err.Error())
 		return acc, false
 	}
 
 	row.Next()
-	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber)
+	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber, &acc.RegistrationTime)
 	row.Close()
-	acc.Username = strings.Replace(acc.Email, "@phantom-im.xyz", "", -1)
+	acc.Username = strings.Replace(acc.Email, util.GetMailDomain(), "", -1)
 
 	return acc, true
 }
@@ -91,14 +91,14 @@ func GetUserDataFromUserId(uid int) (Account, bool) {
 	row, err := util.GetDatabaseHandle().Query("SELECT * from accounts WHERE id= ?", uid)
 
 	if err != nil {
-		util.Error("Failed to get icq number userdata: %s", err.Error())
+		util.Error("Fetch Userdata -> Email", "Failed to get icq number userdata: %s", err.Error())
 		return acc, false
 	}
 
 	row.Next()
-	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber)
+	row.Scan(&acc.UserId, &acc.Email, &acc.Password, &acc.Screenname, &acc.ICQNumber, &acc.RegistrationTime)
 	row.Close()
-	acc.Username = strings.Replace(acc.Email, "@phantom-im.xyz", "", -1)
+	acc.Username = strings.Replace(acc.Email, util.GetMailDomain(), "", -1)
 
 	return acc, true
 }
@@ -110,7 +110,7 @@ func GetUploadDataFromUserId(uid int) (Upload, bool) {
 	row, err := util.GetDatabaseHandle().Query("SELECT * from upload WHERE id= ?", uid)
 
 	if err != nil {
-		util.Error("Failed to get data userdata: %s", err.Error())
+		util.Error("Fetch UploadData -> Uid", "Failed to get data userdata: %s", err.Error())
 		return upl, false
 	}
 

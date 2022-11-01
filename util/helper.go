@@ -3,9 +3,11 @@ package util
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/md5"
 	"crypto/rand"
 	"crypto/rc4"
 	"encoding/base64"
+	"encoding/hex"
 	"io"
 
 	"golang.org/x/text/encoding/unicode"
@@ -96,4 +98,9 @@ func DecryptAES(key string, secure string) string {
 	stream.XORKeyStream(cipherText, cipherText)
 
 	return string(cipherText)
+}
+
+func HashMD5(text string) string {
+	hash := md5.Sum([]byte(text))
+	return hex.EncodeToString(hash[:])
 }
