@@ -56,3 +56,4 @@ If you'd like to contribute, please join our [Discord](https://discord.gg/UPHUsu
 ## Credits
 * EthernalRaine (Lu): Creating the original MMS-Ghost, adding beta MSIM support, adding MSNP2 support and archiving MSIM Clients
 * EinTim23 (Tim): Rewriting MMS-Ghost as Phantom-IM in Golang, reversing MSIM Clients and adding almost full MSIM support
+* henpett1 (Henpett): Adding rotating ads system into MSIM AdServer API
