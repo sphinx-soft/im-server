@@ -10,7 +10,8 @@ import (
 func handleClientIncomingSwitchboardPackets(ctx *msnp_switchboard_context, data string) {
 
 	switch {
-
+	case strings.HasPrefix(data, "CAL"):
+		handleClientSwitchboardPacketSendSwitchboardInvite(ctx, data)
 	}
 }
 
@@ -32,4 +33,19 @@ func handleClientSwitchboardPacketAuthentication(ctx *msnp_switchboard_context, 
 		util.WriteTraffic(ctx.connection, msnp_new_command_noargs(data, "911"))
 		return false
 	}
+}
+
+// todo
+func handleClientSwitchboardPacketSendSwitchboardInvite(ctx *msnp_switchboard_context, data string) {
+
+	mail := findValueFromData("CAL", data, 1)
+	cl := global
+
+	if  {
+		util.WriteTraffic(ctx.connection, msnp_new_command_noargs(data, "217"))
+		return
+	}
+
+	
+
 }
