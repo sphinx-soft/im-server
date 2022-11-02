@@ -12,7 +12,7 @@ Phantom IM's backend server
 Phantom IM is a fully featured backend re-implementation for old IMs. Supported protocols listed below.
 
 Useful Links:
-* [Wiki](wiki.phantom-im.xyz)
+* [Wiki](https://wiki.phantom-im.xyz)
 
 *Registration and Homepage coming soon*
 
