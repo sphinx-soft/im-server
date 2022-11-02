@@ -13,6 +13,7 @@ Phantom IM is a fully featured backend re-implementation for old IMs. Supported 
 
 Useful Links:
 * [Wiki](https://wiki.phantom-im.xyz)
+* [Discord](https://discord.gg/UPHUsumXVM)
 
 *Registration and Homepage coming soon*
 
