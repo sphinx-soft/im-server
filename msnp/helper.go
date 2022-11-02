@@ -16,20 +16,11 @@ func msnp_new_command_noargs(data string, cmd string) string {
 }
 
 /*
-This is the worst code I've ever written!
-
-- First offender: the byte trimming hack
+the byte trimming hack, why?:
 strings.Split will run into a problem when you split with spaces
 where it will stuff 4096 null bytes into your string that
 you can't see without using %v and a byte cast to the string
 so to fix this i added this cursed byte trimmer hack
-
-- Second offender: the slice abusing trick
-Golang doesn't feature preset values for params like c++
-(example: void someFunc(int someInt = 0) in a header)
-so to work around this i abuse a mechanism where slices
-are 0 for ints when undefined thus solving my issue where
-offset is not added when not defined additionally
 */
 
 func findValueFromData(data_search string, packet string, offset int) string {

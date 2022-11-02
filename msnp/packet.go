@@ -23,13 +23,13 @@ func handleClientIncomingPackets(client *global.Client, ctx *msnp_context, data 
 	case strings.HasPrefix(data, "SYN"):
 		handleClientPacketContactListSynchronization(client, data)
 	case strings.HasPrefix(data, "CHG"):
-		handleClientPacketChangeStatusRequest(client, data)
+		handleClientPacketChangeStatusRequest(client, ctx, data)
 	case strings.HasPrefix(data, "CVR"):
 		handleClientPacketGetClientServerInformation(client, data)
 	case strings.HasPrefix(data, "ADD"):
 		handleClientPacketUpdateContactRequest(client, data)
 	case strings.HasPrefix(data, "XFR"):
-		handleClientPacketSwitchboardSessionRequest(client, data)
+		handleClientPacketSwitchboardSessionRequest(client, ctx, data)
 	}
 
 }
@@ -188,17 +188,17 @@ func handleClientPacketContactListSynchronization(client *global.Client, data st
 
 }
 
-func handleClientPacketChangeStatusRequest(client *global.Client, data string) {
+func handleClientPacketChangeStatusRequest(client *global.Client, ctx *msnp_context, data string) {
 
 	//todo
 	util.WriteTraffic(client.Connection, msnp_new_command(data, "CHG", findValueFromData("CHG", data, 1)))
 
+	ctx.status = findValueFromData("CHG", data, 1)
 }
 
 // [MySpaceIM] Client Authenticated! | Username: test@phantom-im.xyz | Screenname: TestUser | Version: 1.0.595.0
 func handleClientPacketGetClientServerInformation(client *global.Client, data string) {
 
-	//todo
 	build := findValueFromData("CVR", data, 6)
 	client.BuildNumber = build
 
@@ -254,11 +254,13 @@ func handleClientPacketUpdateContactRequest(client *global.Client, data string) 
 	}
 }
 
-func handleClientPacketSwitchboardSessionRequest(client *global.Client, data string) {
+func handleClientPacketSwitchboardSessionRequest(client *global.Client, ctx *msnp_context, data string) {
 	date := time.Now().UTC().UnixMilli()
 	sbctx := msnp_switchboard_context{
 		authentication: strconv.FormatInt(date, 16),
 		email:          client.Account.Email,
+		nscontext:      ctx,
+		nsinterface:    client.Connection,
 	}
 	addSwitchboardContext(&sbctx)
 
