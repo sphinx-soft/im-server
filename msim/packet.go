@@ -127,7 +127,9 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 
 	uid := acc.UserId
 	screenname := acc.Screenname
-	password := util.DecryptAES(util.GetAESKey(), acc.Password)
+	password := strings.Replace(util.DecryptAES(util.GetAESKey(), acc.Password), "\r\n", "", -1)
+
+	util.Debug("MySpace -> handleClientAuthentication", "rc4 pw test: %v", []byte(password))
 
 	byte_nc2 := make([]byte, 32)
 	byte_rc4_key := make([]byte, 16)
@@ -141,11 +143,15 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 	hasher.Write(byte_password)
 	byte_hash_phase1 := hasher.Sum(nil)
 
+	util.Debug("MySpace -> handleClientAuthentication", "sha1 pw test1: %v", byte_hash_phase1)
+
 	byte_hash_phase2 := append(byte_hash_phase1, byte_nc2...)
 	hasher.Reset()
 	hasher.Write(byte_hash_phase2)
 	byte_hash_total := hasher.Sum(nil)
 	hasher.Reset()
+
+	util.Debug("MySpace -> handleClientAuthentication", "sha1 pw test2: %v", byte_hash_phase2)
 
 	for i := 0; i < 16; i++ {
 		byte_rc4_key[i] = byte_hash_total[i]
@@ -157,6 +163,8 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 		return false
 	}
 	rc4data := util.DecryptRC4(byte_rc4_key, byte_rc4_data)
+	util.Debug("MySpace -> handleClientAuthentication", "rc4 data test: %v", rc4data)
+	util.Debug("MySpace -> handleClientAuthentication", "rc4 data test: %s", string(rc4data))
 
 	if strings.Contains(string(rc4data), username) {
 		res, _ := util.GetDatabaseHandle().Query("UPDATE myspace SET lastlogin = ? WHERE id= ?", time.Now().UnixNano(), acc.UserId)
