@@ -12,7 +12,8 @@ Phantom IM's backend server
 Phantom IM is a fully featured backend re-implementation for old IMs. Supported protocols listed below.
 
 Useful Links:
-* [Wiki](wiki.phantom-im.xyz)
+* [Wiki](https://wiki.phantom-im.xyz)
+* [Discord](https://discord.gg/UPHUsumXVM)
 
 *Registration and Homepage coming soon*
 
@@ -29,12 +30,14 @@ MySpaceIM (MSIM Protocol):
 * "Zaps" (Action Messages)
 * Typing Indicators
 * Profile Information
-* Advertisement Server
+* Advertisement Server (now randomized)
 
 MSN Messenger (MSNP Protocol):
-* MSNP2 Supported
+* MSNP2, MSNP3 Supported
 * Dispatching to NS
-* Authentication (CTP)
+* Dispatching to SB
+* NS Authentication (CTP, MD5)
+* SB Authentication
 
 Please check the Issues for broken and/or missing features!
 
@@ -54,3 +57,4 @@ If you'd like to contribute, please join our [Discord](https://discord.gg/UPHUsu
 ## Credits
 * EthernalRaine (Lu): Creating the original MMS-Ghost, adding beta MSIM support, adding MSNP2 support and archiving MSIM Clients
 * EinTim23 (Tim): Rewriting MMS-Ghost as Phantom-IM in Golang, reversing MSIM Clients and adding almost full MSIM support
+* henpett1 (Henpett): Adding rotating ads system into MSIM AdServer API
