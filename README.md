@@ -29,12 +29,14 @@ MySpaceIM (MSIM Protocol):
 * "Zaps" (Action Messages)
 * Typing Indicators
 * Profile Information
-* Advertisement Server
+* Advertisement Server (now randomized)
 
 MSN Messenger (MSNP Protocol):
-* MSNP2 Supported
+* MSNP2, MSNP3 Supported
 * Dispatching to NS
-* Authentication (CTP)
+* Dispatching to SB
+* NS Authentication (CTP, MD5)
+* SB Authentication
 
 Please check the Issues for broken and/or missing features!
 
