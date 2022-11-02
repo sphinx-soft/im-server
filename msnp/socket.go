@@ -15,7 +15,7 @@ func HandleNotification() {
 
 		go func() {
 			if err != nil {
-				util.Error("MSNP -> HandleDispatch", "Failed to accept Client! ", err.Error())
+				util.Error("MSNP -> HandleNotification", "Failed to accept Client! ", err.Error())
 			} else {
 				util.Debug("MSNP -> HandleNotification", "Accepted Client")
 			}
