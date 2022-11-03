@@ -7,6 +7,7 @@ import (
 type msnp_context struct {
 	dispatched bool
 	ctxkey     int
+	email      string
 	authmethod string
 	status     string
 }

@@ -5,6 +5,7 @@ import (
 	"phantom/global"
 	"phantom/util"
 	"strings"
+	"time"
 )
 
 func handleClientIncomingSwitchboardPackets(ctx *msnp_switchboard_context, data string) {
@@ -39,13 +40,29 @@ func handleClientSwitchboardPacketAuthentication(ctx *msnp_switchboard_context, 
 func handleClientSwitchboardPacketSendSwitchboardInvite(ctx *msnp_switchboard_context, data string) {
 
 	mail := findValueFromData("CAL", data, 1)
-	cl := global
+	var cl *msnp_context
+	var cx *global.Client
 
-	if  {
+	for i := 0; i < len(global.Clients); i++ {
+		if global.Clients[i].Account.Email == mail {
+			cx = global.Clients[i]
+		}
+	}
+
+	for i := 0; i < len(msn_context_list); i++ {
+		if msn_context_list[i].email == cx.Account.Email {
+			cl = msn_context_list[i]
+		}
+	}
+
+	if cl.status == "HDN" {
 		util.WriteTraffic(ctx.connection, msnp_new_command_noargs(data, "217"))
 		return
 	}
 
-	
+	ctx.sessionid = generateContextKey() // generate random int
+	util.WriteTraffic(ctx.connection, msnp_new_command(data, "CAL", fmt.Sprintf("RINGING %d", ctx.sessionid)))
 
+	date := time.Now().UTC().UnixMilli()
+	util.WriteTraffic(cx.Connection, fmt.Sprintf("RNG %d %s:1865 CKI %d %s %s\r\n", ctx.sessionid, util.GetRootUrl(), date, ctx.email, ctx.username))
 }

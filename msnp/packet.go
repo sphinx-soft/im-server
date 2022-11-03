@@ -115,6 +115,7 @@ func handleClientPacketAuthentication(client *global.Client, ctx *msnp_context, 
 	} else {
 
 		account := strings.Replace(findValueFromData("I", data, 0), "@hotmail.com", util.GetMailDomain(), -1)
+		ctx.email = account
 		client.Account, _ = global.GetUserDataFromEmail(account)
 		password := strings.Replace(util.DecryptAES(util.GetAESKey(), client.Account.Password), "\r\n", "", -1)
 		var clpw string
