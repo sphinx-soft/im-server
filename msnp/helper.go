@@ -67,3 +67,12 @@ func removeSwitchboardContext(s []*msnp_switchboard_context, i int) []*msnp_swit
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
 }
+
+func addSwitchboardSession(ctx *msnp_switchboard_session) {
+	msn_switchboard_sessions = append(msn_switchboard_sessions, ctx)
+}
+
+func removeSwitchboardSession(s []*msnp_switchboard_session, i int) []*msnp_switchboard_session {
+	s[i] = s[len(s)-1]
+	return s[:len(s)-1]
+}

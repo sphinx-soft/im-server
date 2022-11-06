@@ -11,6 +11,7 @@ func RunWebServer(port int) {
 	http.HandleFunc("/pfp/", HandlePFP)
 	http.HandleFunc("/html.ng/", CycleMySpaceAds)
 	http.HandleFunc("/adopt/", CycleMySpaceAds)
+	http.HandleFunc("/config/", HandleYPager)
 	util.Log("HTTP Listener", "Listening on 0.0.0.0:%d", port)
 	err := http.ListenAndServe(":"+strconv.Itoa(port), nil)
 	if err != nil {

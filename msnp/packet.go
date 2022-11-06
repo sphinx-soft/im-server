@@ -44,34 +44,15 @@ func handleClientLogoutRequest(data string) bool {
 
 func handleClientProtocolVersionRequest(client *global.Client, data string) bool {
 
-	/*
-		decode := strings.Replace(packet, "\r\n", "", -1)
-			splits := strings.Split(decode, " ")
-
-			for ix := 0; ix < len(splits); ix++ {
-				if splits[ix] == data_search {
-					//return splits[ix+1+len(offset)]
-					//string(bytes.Trim([]byte(splits[1]), "\x00"))
-					return string(bytes.Trim([]byte(splits[ix+1+len(offset)]), "\x00"))
-				}
-			}
-
-			return ""
-	*/
-
-	versions := make([]string, 4096)
-	strdata := strings.Replace(data, "\r\n", "", -1)
-	splits := strings.Split(strdata, " ")
-
-	for ix := 2; ix < len(splits); ix++ {
-		if splits[ix] == "CVR0" {
-			break
-		}
-
+	var versions []string
+	splits := strings.Split(strings.Replace(data, "\r\n", "", -1), " ")
+	for ix := 2; ix < len(splits)-1; ix++ {
 		versions = append(versions, splits[ix])
 	}
 
 	protoverstr := versions[len(versions)-1]
+	util.Debug("MSNP -> handleProtocolVersionRequest", "ver: %s", protoverstr)
+
 	protoverstripped := strings.Replace(protoverstr, "MSNP", "", -1)
 	protover, _ := strconv.Atoi(protoverstripped)
 

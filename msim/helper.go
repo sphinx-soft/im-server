@@ -8,67 +8,6 @@ import (
 	"strings"
 )
 
-func msim_new_data_string(key string, value string) msim_data_pair {
-	return msim_data_pair{Key: key, Value: value}
-}
-
-func msim_new_data_int(key string, value int) msim_data_pair {
-	return msim_data_pair{Key: key, Value: strconv.Itoa(value)}
-}
-
-func msim_new_data_int64(key string, value int64) msim_data_pair {
-	return msim_data_pair{Key: key, Value: strconv.FormatInt(value, 10)}
-}
-
-func msim_new_data_dictonary(key string, value string) msim_data_pair {
-	return msim_new_data_string(key, value)
-}
-
-func msim_new_data_boolean(key string, value bool) msim_data_pair {
-	if value {
-		return msim_data_pair{Key: key, Value: "1"}
-	} else {
-		return msim_data_pair{Key: key, Value: ""}
-	}
-}
-
-func findValueFromKey(key string, packet []byte) string {
-
-	decodedPacket := string(packet)
-	splits := strings.Split(decodedPacket, "\\")
-
-	for ix := 0; ix < len(splits); ix++ {
-		if splits[ix] == key {
-			return splits[ix+1]
-		}
-	}
-
-	return ""
-}
-
-func buildDataPacket(datapairs []msim_data_pair) string {
-
-	final := ""
-	for i := 0; i < len(datapairs); i++ {
-		final += "\\" + datapairs[i].Key
-		if datapairs[i].Value != "" {
-			final += "\\" + datapairs[i].Value
-		}
-	}
-	final += "\\final\\"
-	return final
-}
-
-func buildDataBody(datapairs []msim_data_pair) string {
-
-	final := ""
-	for i := 0; i < len(datapairs); i++ {
-		final += datapairs[i].Key + "="
-		final += datapairs[i].Value + "\x1c"
-	}
-	return final
-}
-
 func generateNonce() string {
 
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -143,16 +82,18 @@ func identifyProtocolVersion(clientver string) string {
 
 	if ver <= 253 {
 		return "MSIMv1"
-	} else if ver > 253 && ver <= 366 {
+	} else if ver > 253 && ver < 366 {
 		return "MSIMv2"
-	} else if ver > 366 && ver <= 595 {
+	} else if ver > 366 && ver < 404 {
 		return "MSIMv3"
-	} else if ver > 595 && ver <= 673 {
+	} else if ver > 404 && ver < 594 {
 		return "MSIMv4"
-	} else if ver > 673 && ver <= 697 {
+	} else if ver > 593 && ver < 673 {
 		return "MSIMv5"
-	} else if ver > 697 && ver <= 812 {
+	} else if ver > 673 && ver < 697 {
 		return "MSIMv6"
+	} else if ver > 697 && ver < 812 {
+		return "MSIMv7"
 	}
 
 	return ""

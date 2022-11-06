@@ -20,7 +20,7 @@ Useful Links:
 ## Features
 
 MySpaceIM (MSIM Protocol):
-* MSIMv1 - MSIMv6 Supported
+* MSIMv1 - MSIMv7 Supported
 * Authentication (RC4)
 * Contacts (Add and Remove)
 * Instant Messages
