@@ -7,11 +7,20 @@ import (
 )
 
 func RunWebServer(port int) {
-	http.HandleFunc("/api", HandleAPI)
-	http.HandleFunc("/pfp/", HandlePFP)
-	http.HandleFunc("/html.ng/", CycleMySpaceAds)
-	http.HandleFunc("/adopt/", CycleMySpaceAds)
-	http.HandleFunc("/config/", HandleYPager)
+	if util.GetServiceEnabled("msim") {
+		util.Log("WebAPI Handler", "Installed IM Picture Handler for MSIM")
+		http.HandleFunc("/pfp/", HandlePFP)
+
+		util.Log("WebAPI Handler", "Installed Advertisment Handler for MSIM")
+		http.HandleFunc("/html.ng/", CycleMySpaceAds)
+		http.HandleFunc("/adopt/", CycleMySpaceAds)
+	}
+
+	if util.GetServiceEnabled("ypager") {
+		util.Log("WebAPI Handler", "Installed Web Auth Handler for YMSG")
+		http.HandleFunc("/config/", HandleYPager)
+	}
+
 	util.Log("HTTP Listener", "Listening on 0.0.0.0:%d", port)
 	err := http.ListenAndServe(":"+strconv.Itoa(port), nil)
 	if err != nil {

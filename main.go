@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"os/signal"
 	"phantom/global"
 	"phantom/http"
 	"phantom/msim"
@@ -43,7 +45,6 @@ func port1863Handler() {
 		} else {
 			go msim.HandleClients(&client)
 			go msim.HandleClientKeepalive(&client)
-
 		}
 	}
 }
@@ -54,15 +55,30 @@ func main() {
 	util.Log("Entry", "Syncing Database")
 	util.InitDatabase()
 
-	util.Log("Handler", "Launched Handler for Port 1863")
-	go port1863Handler()
+	if util.GetServiceEnabled("msnp") || util.GetServiceEnabled("msim") {
+		util.Log("Handler", "Launched Handler for Port 1863")
+		go port1863Handler()
+	}
 
-	util.Log("Handler", "Launched Handler for MSNP Notification")
-	go msnp.HandleNotification()
+	if util.GetServiceEnabled("msnp") {
 
-	util.Log("Handler", "Launched Handler for MSNP Switchboard")
-	go msnp.HandleSwitchboard()
+		util.Log("Handler", "Launched Handler for MSNP Switchboard")
+		go msnp.HandleSwitchboard()
 
-	util.Log("Handler", "Launched Handler for HTTP Server")
-	http.RunWebServer(80)
+		util.Log("Handler", "Launched Handler for MSNP Notification")
+		go msnp.HandleNotification()
+	}
+
+	if util.GetServiceEnabled("http") {
+		util.Log("Handler", "Launched Handler for HTTP Server")
+		go http.RunWebServer(80)
+	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	for sig := range c {
+		util.Log("Exit Handler", "Captured %v! Stopping Server...", sig)
+		os.Exit(0)
+	}
+
 }

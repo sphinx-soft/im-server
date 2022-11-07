@@ -39,3 +39,13 @@ func GetAESKey() string {
 func GetMailDomain() string {
 	return fmt.Sprintf("%s", readJsonConfig()["maildomain"])
 }
+
+func GetServiceEnabled(service string) bool {
+	str := fmt.Sprintf("%s", readJsonConfig()[service])
+
+	if str == "on" {
+		return true
+	} else {
+		return false
+	}
+}
