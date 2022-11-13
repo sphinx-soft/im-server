@@ -66,6 +66,14 @@ func handleClientIncomingPersistPackets(client *global.Client, ctx *msim_context
 			if strings.Contains(str, "\\dsn\\5") && strings.Contains(str, "\\lid\\7") {
 				handleClientPacketUserLookupMySpaceByUsernameOrEmail(client, data)
 			}
+
+			if strings.Contains(str, "\\dsn\\6") && strings.Contains(str, "\\lid\\11") {
+				handleClientPacketRequestNetLink(client, data)
+			}
+
+			if strings.Contains(str, "\\dsn\\7") && strings.Contains(str, "\\lid\\18") {
+				handleClientPacketNewNotificationRequest(client, data)
+			}
 		}
 		if strings.Contains(str, "\\cmd\\514") || strings.Contains(str, "\\cmd\\2") {
 			if strings.Contains(str, "\\dsn\\8") && strings.Contains(str, "\\lid\\13") {
@@ -671,6 +679,45 @@ func handleClientPacketUserLookupMySpaceByUsernameOrEmail(client *global.Client,
 	util.WriteTraffic(client.Connection, res)
 }
 
+// Persist 1;6;11
+func handleClientPacketRequestNetLink(client *global.Client, packet []byte) {
+	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+
+	//test
+	res := buildDataPacket([]msim_data_pair{
+		msim_new_data_boolean("persistr", true),
+		msim_new_data_int("uid", client.Account.UserId),
+		msim_new_data_int("cmd", cmd^256),
+		msim_new_data_string("dsn", findValueFromKey("dsn", packet)),
+		msim_new_data_string("lid", findValueFromKey("lid", packet)),
+		msim_new_data_string("rid", findValueFromKey("rid", packet)),
+		msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+			msim_new_data_string("!URL", escapeString("http://google.de")),
+		})),
+	})
+	util.WriteTraffic(client.Connection, res)
+}
+
+// Persist 1;7;18
+func handleClientPacketNewNotificationRequest(client *global.Client, packet []byte) {
+	/*	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
+
+		//test
+		res := buildDataPacket([]msim_data_pair{
+			msim_new_data_boolean("persistr", true),
+			msim_new_data_int("uid", client.Account.UserId),
+			msim_new_data_int("cmd", cmd^256),
+			msim_new_data_string("dsn", findValueFromKey("dsn", packet)),
+			msim_new_data_string("lid", findValueFromKey("lid", packet)),
+			msim_new_data_string("rid", findValueFromKey("rid", packet)),
+			msim_new_data_dictonary("body", buildDataBody([]msim_data_pair{
+				msim_new_data_string("FriendRequest", "On"),
+			})),
+		})
+		util.WriteTraffic(client.Connection, res)
+	*/
+}
+
 var buf []byte
 
 // persist 514;8;13 2;8;13 change_profile_picture
@@ -693,7 +740,7 @@ func handleClientPacketChangePicture(client *global.Client, packet []byte) {
 		} else if strings.Contains(string(buf), "PNG") {
 			pfpType = "png"
 		} else {
-			pfpType = "jpeg"
+			pfpType = "jpg"
 		}
 		res, _ := util.GetDatabaseHandle().Query("UPDATE upload SET avatar= ? WHERE id= ?", base64.StdEncoding.EncodeToString(buf), client.Account.UserId)
 		res.Close()
