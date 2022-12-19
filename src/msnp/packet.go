@@ -92,7 +92,7 @@ func handleClientPacketAuthenticationMethod(client *global.Client, ctx *msnp_con
 func handleClientPacketAuthentication(client *global.Client, ctx *msnp_context, data string) {
 	if !ctx.dispatched {
 		util.WriteTraffic(client.Connection, msnp_new_command(data, "XFR", fmt.Sprintf("NS %s:1864", util.GetRootUrl())))
-		util.Log("MSN Messenger", "Redirecting Client to Notification Server...")
+		util.Log(util.INFO, "MSN Messenger", "Redirecting Client to Notification Server...")
 	} else {
 
 		account := strings.Replace(findValueFromData("I", data, 0), "@hotmail.com", util.GetMailDomain(), -1)
@@ -186,7 +186,7 @@ func handleClientPacketGetClientServerInformation(client *global.Client, data st
 
 	util.WriteTraffic(client.Connection, msnp_new_command(data, "CVR", fmt.Sprintf("%s %s %s %s %s", build, build, "1.0.0000", "https://archive.org/download/MsnMessengerClients2/MSN%20Messenger%201.0.0863%20%28English%20-%20United%20States%29.zip", "http://phantom-im.xyz")))
 
-	util.Log("MSN Messenger", "Client Authenticated! -> Email: %s, Screenname: %s, Version: %s, Protocol Version: %s", client.Account.Email, client.Account.Screenname, client.BuildNumber, client.Protocol)
+	util.Log(util.INFO, "MSN Messenger", "Client Authenticated! -> Email: %s, Screenname: %s, Version: %s, Protocol Version: %s", client.Account.Email, client.Account.Screenname, client.BuildNumber, client.Protocol)
 }
 
 /*todo*/

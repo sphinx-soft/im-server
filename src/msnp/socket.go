@@ -20,7 +20,7 @@ func HandleNotification() {
 				util.Debug("MSNP -> HandleNotification", "Accepted Client")
 			}
 
-			util.Log("MSN Messenger", "Client awaiting authentication from %s", tcpClient.RemoteAddr().String())
+			util.Log(util.INFO, "MSN Messenger", "Client awaiting authentication from %s", tcpClient.RemoteAddr().String())
 
 			client := global.Client{
 				Connection: tcpClient,
@@ -55,9 +55,9 @@ func HandleNotification() {
 			}
 
 			if client.Account.Email != "" {
-				util.Log("MSN Messenger", "Client Disconnected -> Email: %s", client.Account.Email)
+				util.Log(util.INFO, "MSN Messenger", "Client Disconnected -> Email: %s", client.Account.Email)
 			} else {
-				util.Log("MSN Messenger", "Client Disconnected -> Email: Unknown")
+				util.Log(util.INFO, "MSN Messenger", "Client Disconnected -> Email: Unknown")
 			}
 
 			for i := 0; i < len(global.Clients); i++ {
@@ -80,7 +80,7 @@ func HandleNotification() {
 }
 
 func HandleDispatch(client *global.Client, firstread string) {
-	util.Log("MSN Messenger", "Client awaiting dispatch from %s", client.Connection.RemoteAddr().String())
+	util.Log(util.INFO, "MSN Messenger", "Client awaiting dispatch from %s", client.Connection.RemoteAddr().String())
 
 	client.Client = "MSN Messenger"
 
@@ -118,9 +118,9 @@ func HandleDispatch(client *global.Client, firstread string) {
 	}
 
 	if client.Account.Email != "" {
-		util.Log("MSN Messenger", "Client Redirected -> Email: %s", client.Account.Email)
+		util.Log(util.INFO, "MSN Messenger", "Client Redirected -> Email: %s", client.Account.Email)
 	} else {
-		util.Log("MSN Messenger", "Client Disconnected (DS) -> Email: Unknown")
+		util.Log(util.INFO, "MSN Messenger", "Client Disconnected (DS) -> Email: Unknown")
 	}
 
 	for i := 0; i < len(global.Clients); i++ {
@@ -153,7 +153,7 @@ func HandleSwitchboard() {
 				util.Debug("MSNP -> HandleSwitchboard", "Accepted Client")
 			}
 
-			util.Log("MSN Messenger", "Client joining switchboard from %s", tcpClient.RemoteAddr().String())
+			util.Log(util.INFO, "MSN Messenger", "Client joining switchboard from %s", tcpClient.RemoteAddr().String())
 
 			data, _ := util.ReadTraffic(tcpClient)
 
@@ -193,9 +193,9 @@ func HandleSwitchboard() {
 			}
 
 			if ctx.email != "" {
-				util.Log("MSN Messenger", "Client Left Switchboard -> Email: %s", ctx.email)
+				util.Log(util.INFO, "MSN Messenger", "Client Left Switchboard -> Email: %s", ctx.email)
 			} else {
-				util.Log("MSN Messenger", "Client Disconnected (SB) -> Email: Unknown")
+				util.Log(util.INFO, "MSN Messenger", "Client Disconnected (SB) -> Email: Unknown")
 			}
 
 			for i := 0; i < len(msn_switchboard_list); i++ {

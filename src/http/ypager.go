@@ -24,7 +24,7 @@ import (
 */
 
 func HandleYPager(w http.ResponseWriter, r *http.Request) {
-	util.Log("Yahoo! Pager", "Client awaiting Web Authentication from: %s", r.RemoteAddr)
+	util.Log(util.INFO, "Yahoo! Pager", "Client awaiting Web Authentication from: %s", r.RemoteAddr)
 
 	//cookie := http.Cookie{
 	//		Name: "Y",

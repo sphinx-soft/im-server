@@ -50,34 +50,35 @@ func port1863Handler() {
 }
 
 func main() {
-	util.Log("Entry", "Starting Phantom-IM-Server!")
+	util.Log(util.INFO, "Phantom-IM", "Starting Phantom-IM-Server!")
+	util.Log(util.INFO, "Phantom-IM", "Build Number: ")
 
-	util.Log("Entry", "Syncing Database")
+	util.Log(util.INFO, "Main", "Syncing Database")
 	util.InitDatabase()
 
 	if util.GetServiceEnabled("msnp") || util.GetServiceEnabled("msim") {
-		util.Log("Handler", "Launched Handler for Port 1863")
+		util.Log(util.INFO, "Service Handler", "Launched Handler for Port 1863")
 		go port1863Handler()
 	}
 
 	if util.GetServiceEnabled("msnp") {
 
-		util.Log("Handler", "Launched Handler for MSNP Switchboard")
+		util.Log(util.INFO, "Service Handler", "Launched Handler for MSNP Switchboard")
 		go msnp.HandleSwitchboard()
 
-		util.Log("Handler", "Launched Handler for MSNP Notification")
+		util.Log(util.INFO, "Service Handler", "Launched Handler for MSNP Notification")
 		go msnp.HandleNotification()
 	}
 
 	if util.GetServiceEnabled("http") {
-		util.Log("Handler", "Launched Handler for HTTP Server")
+		util.Log(util.INFO, "Service Handler", "Launched Handler for HTTP Server")
 		go http.RunWebServer(80)
 	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	for sig := range c {
-		util.Log("Exit Handler", "Captured %v! Stopping Server...", sig)
+		util.Log(util.INFO, "Exit Handler", "Captured %v! Stopping Server...", sig)
 		os.Exit(0)
 	}
 

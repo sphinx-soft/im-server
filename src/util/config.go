@@ -7,7 +7,7 @@ import (
 )
 
 func readJsonConfig() map[string]interface{} {
-	content, err := os.ReadFile("./config.json")
+	content, err := os.ReadFile("../cfg/config.json")
 
 	if err != nil {
 		panic(err)

@@ -7,7 +7,7 @@ import (
 )
 
 func HandleClients(client *global.Client) {
-	util.Log("MySpaceIM", "Client awaiting authentication from %s", client.Connection.RemoteAddr().String())
+	util.Log(util.INFO, "MySpaceIM", "Client awaiting authentication from %s", client.Connection.RemoteAddr().String())
 
 	client.Client = "MySpaceIM"
 
@@ -48,7 +48,7 @@ func HandleClients(client *global.Client) {
 
 	handleClientBroadcastSignOffStatus(client, &ctx)
 
-	util.Log("MySpaceIM", "Client Disconnected -> Username: %s", client.Account.Username)
+	util.Log(util.INFO, "MySpaceIM", "Client Disconnected -> Username: %s", client.Account.Username)
 
 	for i := 0; i < len(global.Clients); i++ {
 		if global.Clients[i].Account.Email == client.Account.Email {

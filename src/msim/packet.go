@@ -177,7 +177,7 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 	if strings.Contains(string(rc4data), username) {
 		res, _ := util.GetDatabaseHandle().Query("UPDATE myspace SET lastlogin = ? WHERE id= ?", time.Now().UnixNano(), acc.UserId)
 		res.Close()
-		util.Log("MySpaceIM", "Client Authenticated! -> Username: %s, Screenname: %s, Version: 1.0.%s.0, Protocol Version: %s", username, screenname, version, client.Protocol)
+		util.Log(util.INFO,"MySpaceIM", "Client Authenticated! -> Username: %s, Screenname: %s, Version: 1.0.%s.0, Protocol Version: %s", username, screenname, version, client.Protocol)
 		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 			msim_new_data_string("lc", "2"),
 			msim_new_data_int("sesskey", ctx.sesskey),

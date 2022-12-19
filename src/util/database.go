@@ -17,7 +17,7 @@ func InitDatabase() {
 	}
 	database.SetMaxOpenConns(100)
 	database.SetMaxIdleConns(50)
-	Log("Database", "Initialised database server")
+	Log(INFO, "Database", "Initialised Database server")
 }
 
 func GetDatabaseHandle() *sql.DB {
