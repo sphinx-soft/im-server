@@ -1,0 +1,14 @@
+{
+    "connection" : {
+        "maildomain":"@{your domain here}",
+        "root":"{your host here (either localhost or remote url/ip)}",
+        "dblogin":"username:password",
+        "aeskey":"16/24/32 char length key"
+    },
+    "services": {
+        "myspace":"on",
+        "msn":"off",
+        "yahoo":"off",
+        "api":"on"
+    }
+}
