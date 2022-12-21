@@ -122,7 +122,7 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 
 	loginpacket, success := util.ReadTraffic(client.Connection)
 	if !success {
-		util.Error("MySpace -> handleClientAuthentication", "Failed to read Login2 Data Packet!")
+		util.Log(util.INFO, "MySpace -> handleClientAuthentication", "Failed to read Login2 Data Packet!")
 		return false
 	}
 
@@ -137,7 +137,7 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 	screenname := acc.Screenname
 	password := strings.Replace(util.DecryptAES(util.GetAESKey(), acc.Password), "\r\n", "", -1)
 
-	util.Debug("MySpace -> handleClientAuthentication", "rc4 pw test: %v", []byte(password))
+	util.Log(util.TRACE, "MySpace -> handleClientAuthentication", "rc4 pw test: %v", []byte(password))
 
 	byte_nc2 := make([]byte, 32)
 	byte_rc4_key := make([]byte, 16)
@@ -151,7 +151,7 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 	hasher.Write(byte_password)
 	byte_hash_phase1 := hasher.Sum(nil)
 
-	util.Debug("MySpace -> handleClientAuthentication", "sha1 pw test1: %v", byte_hash_phase1)
+	util.Log(util.TRACE, "MySpace -> handleClientAuthentication", "sha1 pw test1: %v", byte_hash_phase1)
 
 	byte_hash_phase2 := append(byte_hash_phase1, byte_nc2...)
 	hasher.Reset()
@@ -159,7 +159,7 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 	byte_hash_total := hasher.Sum(nil)
 	hasher.Reset()
 
-	util.Debug("MySpace -> handleClientAuthentication", "sha1 pw test2: %v", byte_hash_phase2)
+	util.Log(util.TRACE, "MySpace -> handleClientAuthentication", "sha1 pw test2: %v", byte_hash_phase2)
 
 	for i := 0; i < 16; i++ {
 		byte_rc4_key[i] = byte_hash_total[i]
@@ -167,17 +167,17 @@ func handleClientAuthentication(client *global.Client, ctx *msim_context) bool {
 	packetrc4data := findValueFromKey("response", loginpacket)
 	byte_rc4_data, err := base64.StdEncoding.DecodeString(packetrc4data)
 	if err != nil {
-		util.Error("MySpace -> handleClientAuthentication", "Invalid base64 provided at login packet.")
+		util.Log(util.INFO, "MySpace -> handleClientAuthentication", "Invalid base64 provided at login packet.")
 		return false
 	}
 	rc4data := util.DecryptRC4(byte_rc4_key, byte_rc4_data)
-	util.Debug("MySpace -> handleClientAuthentication", "rc4 data test: %v", rc4data)
-	util.Debug("MySpace -> handleClientAuthentication", "rc4 data test: %s", string(rc4data))
+	util.Log(util.TRACE, "MySpace -> handleClientAuthentication", "rc4 data test: %v", rc4data)
+	util.Log(util.TRACE, "MySpace -> handleClientAuthentication", "rc4 data test: %s", string(rc4data))
 
 	if strings.Contains(string(rc4data), username) {
 		res, _ := util.GetDatabaseHandle().Query("UPDATE myspace SET lastlogin = ? WHERE id= ?", time.Now().UnixNano(), acc.UserId)
 		res.Close()
-		util.Log(util.INFO,"MySpaceIM", "Client Authenticated! -> Username: %s, Screenname: %s, Version: 1.0.%s.0, Protocol Version: %s", username, screenname, version, client.Protocol)
+		util.Log(util.INFO, "MySpaceIM", "Client Authenticated! -> Username: %s, Screenname: %s, Version: 1.0.%s.0, Protocol Version: %s", username, screenname, version, client.Protocol)
 		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 			msim_new_data_string("lc", "2"),
 			msim_new_data_int("sesskey", ctx.sesskey),
@@ -280,7 +280,7 @@ func handleClientHandleOfflineMessages(client *global.Client, ctx *msim_context)
 			//	msim_new_data_int("date", msg.date),
 			msim_new_data_string("msg", msg.Message),
 		}))
-		util.Debug("MySpace -> handleClientOfflineEvents", "%d", msg.Date)
+		util.Log(util.TRACE, "MySpace -> handleClientOfflineEvents", "%d", msg.Date)
 	}
 	res.Close()
 	res2, _ := util.GetDatabaseHandle().Query("DELETE from offlinemsgs WHERE to_id= ?", client.Account.UserId)
@@ -335,7 +335,7 @@ func handleClientPacketSetStatusMessages(client *global.Client, ctx *msim_contex
 // addbuddy message
 func handleClientPacketAddBuddy(client *global.Client, ctx *msim_context, packet []byte) {
 	if findValueFromKey("newprofileid", packet) == "6221" {
-		util.Debug("MySpace -> handleClientPacketAddBuddy", "MySpace Chatbot Friend Request Detected! Skipping...")
+		util.Log(util.TRACE, "MySpace -> handleClientPacketAddBuddy", "MySpace Chatbot Friend Request Detected! Skipping...")
 		return
 	}
 	newprofileid := findValueFromKey("newprofileid", packet)
@@ -346,7 +346,7 @@ func handleClientPacketAddBuddy(client *global.Client, ctx *msim_context, packet
 	check.Scan(&count)
 	check.Close()
 	if count > 0 {
-		util.Debug("MySpace -> handleClientPacketAddBuddy", "Buddy is already added to Contact List! Returning Error...")
+		util.Log(util.TRACE, "MySpace -> handleClientPacketAddBuddy", "Buddy is already added to Contact List! Returning Error...")
 		util.WriteTraffic(client.Connection, buildDataPacket([]msim_data_pair{
 			msim_new_data_boolean("error", true),
 			msim_new_data_string("errmsg", "The profile requested is already a buddy."),
@@ -354,7 +354,7 @@ func handleClientPacketAddBuddy(client *global.Client, ctx *msim_context, packet
 		}))
 		return
 	}
-	util.Debug("addbuddy", "%d:%d", client.Account.UserId, newprofileid)
+	util.Log(util.TRACE, "addbuddy", "%d:%d", client.Account.UserId, newprofileid)
 	dbres, _ := util.GetDatabaseHandle().Query("INSERT into contacts (`from_id`, `to_id`) VALUES (?, ?)", client.Account.UserId, newprofileid)
 	dbres.Close()
 	var count2 int
@@ -434,7 +434,7 @@ func handleClientPacketGetContactList(client *global.Client, packet []byte) {
 	cmd, _ := strconv.Atoi(findValueFromKey("cmd", packet))
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
-	util.Debug("MySpace -> handleClientPacketGetContactList", "Requested Contact List...")
+	util.Log(util.TRACE, "MySpace -> handleClientPacketGetContactList", "Requested Contact List...")
 	res, _ := util.GetDatabaseHandle().Query("SELECT * from contacts WHERE from_id=?", client.Account.UserId)
 	body := ""
 	for res.Next() {
@@ -481,7 +481,7 @@ func handleClientPacketGetContactInformation(client *global.Client, packet []byt
 
 	parsedbody := strings.Split(findValueFromKey("body", packet), "=")
 
-	util.Debug("MySpace -> handleClientPacketGetContactInformation", "Requesting Contact Information...")
+	util.Log(util.TRACE, "MySpace -> handleClientPacketGetContactInformation", "Requesting Contact Information...")
 	parse, _ := strconv.Atoi(parsedbody[1])
 
 	accountRow, _ := global.GetUserDataFromUserId(parse)
@@ -593,7 +593,7 @@ func handleClientPacketGetGroups(client *global.Client, packet []byte) {
 	dsn := findValueFromKey("dsn", packet)
 	lid := findValueFromKey("lid", packet)
 
-	util.Debug("MySpace -> handleClientPacketGetGroups", "Requesting Contact Groups")
+	util.Log(util.TRACE, "MySpace -> handleClientPacketGetGroups", "Requesting Contact Groups")
 	res := buildDataPacket([]msim_data_pair{
 		msim_new_data_boolean("persistr", true),
 		msim_new_data_int("uid", client.Account.UserId),
@@ -622,7 +622,7 @@ func handleClientPacketUserLookupMySpaceByUid(client *global.Client, packet []by
 	accountRow, _ := global.GetUserDataFromUserId(parse)
 	accountData, _ := getMySpaceDataByUserId(parse)
 
-	util.Debug("MySpace -> handleClientPacketUserLookupMySpaceByUid", "http://%s/pfp/id=%d.%s", pfproot, accountRow.UserId, accountData.avatartype)
+	util.Log(util.TRACE, "MySpace -> handleClientPacketUserLookupMySpaceByUid", "http://%s/pfp/id=%d.%s", pfproot, accountRow.UserId, accountData.avatartype)
 
 	res := buildDataPacket([]msim_data_pair{
 		msim_new_data_boolean("persistr", true),

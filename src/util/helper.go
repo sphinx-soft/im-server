@@ -9,6 +9,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"io"
+	"log"
+	"net"
 
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
@@ -25,7 +27,7 @@ func ConvertToUtf16(input string) []byte {
 func DecryptRC4(pwd []byte, data []byte) []byte {
 	c, err := rc4.NewCipher(pwd)
 	if err != nil {
-		Error("RC4 -> SwapDecryptionState", "Error creating RC4 Ciphertext")
+		Log(INFO, "RC4 -> SwapDecryptionState", "Error creating RC4 Ciphertext")
 		return nil
 	}
 	crypted := make([]byte, len(data))
@@ -43,7 +45,7 @@ func EncryptAES(key string, message string) string {
 
 	//IF NewCipher failed, exit:
 	if err != nil {
-		Error("AES -> Encryption", "Error Encryption AES #1: %s", err.Error())
+		Log(INFO, "AES -> Encryption", "Error Encryption AES #1: %s", err.Error())
 		return ""
 	}
 
@@ -53,7 +55,7 @@ func EncryptAES(key string, message string) string {
 	//iv is the ciphertext up to the blocksize (16)
 	iv := cipherText[:aes.BlockSize]
 	if _, err = io.ReadFull(rand.Reader, iv); err != nil {
-		Error("AES -> Encryption", "Error Encryption AES #2")
+		Log(INFO, "AES -> Encryption", "Error Encryption AES #2")
 		return ""
 	}
 
@@ -71,7 +73,7 @@ func DecryptAES(key string, secure string) string {
 
 	//IF DecodeString failed, exit:
 	if err != nil {
-		Error("AES -> Decryption", "Error Encryption AES #1: %s", err.Error())
+		Log(INFO, "AES -> Decryption", "Error Encryption AES #1: %s", err.Error())
 		return ""
 	}
 
@@ -80,13 +82,13 @@ func DecryptAES(key string, secure string) string {
 
 	//IF NewCipher failed, exit:
 	if err != nil {
-		Error("AES -> Decryption", "Error Encryption AES #2")
+		Log(INFO, "AES -> Decryption", "Error Encryption AES #2")
 		return ""
 	}
 
 	//IF the length of the cipherText is less than 16 Bytes:
 	if len(cipherText) < aes.BlockSize {
-		Error("AES -> Decryption", "Error Encryption AES #3 (short)")
+		Log(INFO, "AES -> Decryption", "Error Encryption AES #3 (short)")
 		return ""
 	}
 
@@ -103,4 +105,23 @@ func DecryptAES(key string, secure string) string {
 func HashMD5(text string) string {
 	hash := md5.Sum([]byte(text))
 	return hex.EncodeToString(hash[:])
+}
+
+var ip net.IP
+
+// Get preferred outbound ip of this machine
+func GetOutboundIP() net.IP {
+	if ip.String() == "" {
+		conn, err := net.Dial("udp", "8.8.8.8:80")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer conn.Close()
+
+		localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+		ip = localAddr.IP
+	}
+
+	return ip
 }

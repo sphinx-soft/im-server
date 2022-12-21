@@ -19,9 +19,9 @@ func port1863Handler() {
 		tcpClient, err := tcpServer.Accept()
 
 		if err != nil {
-			util.Error("Port 1863 Handler", "Failed to accept Client!", err.Error())
+			util.Log(util.ERROR, "Port 1863 Handler", "Failed to accept Client!", err.Error())
 		} else {
-			util.Debug("Port 1863 Handler", "Accepted Client")
+			util.Log(util.TRACE, "Port 1863 Handler", "Accepted Client")
 		}
 
 		var msnp_client bool
@@ -55,6 +55,8 @@ func main() {
 
 	util.Log(util.INFO, "Main", "Syncing Database")
 	util.InitDatabase()
+
+	util.Log(util.INFO, "Network Service", "Server's Outbound IP: %s", util.GetOutboundIP().String())
 
 	if util.GetServiceEnabled("msnp") || util.GetServiceEnabled("msim") {
 		util.Log(util.INFO, "Service Handler", "Launched Handler for Port 1863")

@@ -29,7 +29,7 @@ func getMySpaceDataByEmail(email string) (msim_user_details, bool) {
 
 	row, err := util.GetDatabaseHandle().Query("SELECT * from myspace WHERE id= ?", acc.UserId)
 	if err != nil {
-		util.Error("MySpace -> getMySpaceDataByEmail", err.Error())
+		util.Log(util.INFO, "MySpace -> getMySpaceDataByEmail", err.Error())
 		return user, true
 	}
 
@@ -47,7 +47,7 @@ func getMySpaceDataByUserId(uid int) (msim_user_details, bool) {
 
 	row, err := util.GetDatabaseHandle().Query("SELECT * from myspace WHERE id= ?", acc.UserId)
 	if err != nil {
-		util.Error("MySpace -> getMySpaceDataByUserId", err.Error())
+		util.Log(util.INFO, "MySpace -> getMySpaceDataByUserId", err.Error())
 		return user, true
 	}
 	row.Next()

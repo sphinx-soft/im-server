@@ -23,8 +23,8 @@ func handleClientSwitchboardPacketAuthentication(ctx *msnp_switchboard_context, 
 		auth := findValueFromData("USR", data, 2)
 		acc, _ := global.GetUserDataFromEmail(mail)
 
-		util.Debug("MSNP -> handleClientSwitchboardPacketAuthentication", "auth test1: %s", auth)
-		util.Debug("MSNP -> handleClientSwitchboardPacketAuthentication", "auth test2: %s", ctx.authentication)
+		util.Log(util.TRACE, "MSNP -> handleClientSwitchboardPacketAuthentication", "auth test1: %s", auth)
+		util.Log(util.TRACE, "MSNP -> handleClientSwitchboardPacketAuthentication", "auth test2: %s", ctx.authentication)
 
 		if ctx.authentication == auth {
 			ctx.email = mail

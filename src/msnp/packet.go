@@ -51,14 +51,14 @@ func handleClientProtocolVersionRequest(client *global.Client, data string) bool
 	}
 
 	protoverstr := versions[len(versions)-1]
-	util.Debug("MSNP -> handleProtocolVersionRequest", "ver: %s", protoverstr)
+	util.Log(util.TRACE, "MSNP -> handleProtocolVersionRequest", "ver: %s", protoverstr)
 
 	protoverstripped := strings.Replace(protoverstr, "MSNP", "", -1)
 	protover, _ := strconv.Atoi(protoverstripped)
 
 	if protover <= 7 {
 		client.Protocol = protoverstr
-		util.Debug("MSNP -> handleProtocolVersionRequest", fmt.Sprintf("TrID Dbg: %v", []byte(getTrId(data, "VER"))))
+		util.Log(util.TRACE, "MSNP -> handleProtocolVersionRequest", fmt.Sprintf("TrID Dbg: %v", []byte(getTrId(data, "VER"))))
 		util.WriteTraffic(client.Connection, msnp_new_command(data, "VER", protoverstr))
 		return true
 	} else {
@@ -85,7 +85,7 @@ func handleClientPacketAuthenticationMethod(client *global.Client, ctx *msnp_con
 
 	ctx.authmethod = authmethod
 
-	util.Debug("MSNP -> handleClientPacketAuthenticationMethod", fmt.Sprintf("TrID Dbg: %v", []byte(getTrId(data, "INF"))))
+	util.Log(util.TRACE, "MSNP -> handleClientPacketAuthenticationMethod", fmt.Sprintf("TrID Dbg: %v", []byte(getTrId(data, "INF"))))
 	util.WriteTraffic(client.Connection, msnp_new_command(data, "INF", authmethod))
 }
 
@@ -101,13 +101,13 @@ func handleClientPacketAuthentication(client *global.Client, ctx *msnp_context, 
 		password := strings.Replace(util.DecryptAES(util.GetAESKey(), client.Account.Password), "\r\n", "", -1)
 		var clpw string
 
-		util.Debug("MSNP -> handleClientPacketAuthenticationBegin", "aes test: %s", util.GetAESKey())
-		util.Debug("MSNP -> handleClientPacketAuthenticationBegin", "um data test: %s", account)
-		util.Debug("MSNP -> handleClientPacketAuthenticationBegin", "pw data AES: %v", []byte(password))
+		util.Log(util.TRACE, "MSNP -> handleClientPacketAuthenticationBegin", "aes test: %s", util.GetAESKey())
+		util.Log(util.TRACE, "MSNP -> handleClientPacketAuthenticationBegin", "um data test: %s", account)
+		util.Log(util.TRACE, "MSNP -> handleClientPacketAuthenticationBegin", "pw data AES: %v", []byte(password))
 
 		if ctx.authmethod == "CTP" {
-			util.Debug("MSNP -> handleClientPacketAuthenticationBegin -> CTP", "pw data CTP test1: %v", []byte(strings.Replace(findValueFromData("I", data, 1), "\r\n", "", -1)))
-			util.Debug("MSNP -> handleClientPacketAuthenticationBegin -> CTP", "pw data CTP test2: %v", []byte(password))
+			util.Log(util.TRACE, "MSNP -> handleClientPacketAuthenticationBegin -> CTP", "pw data CTP test1: %v", []byte(strings.Replace(findValueFromData("I", data, 1), "\r\n", "", -1)))
+			util.Log(util.TRACE, "MSNP -> handleClientPacketAuthenticationBegin -> CTP", "pw data CTP test2: %v", []byte(password))
 
 			clpw = strings.Replace(findValueFromData("I", data, 1), "\r\n", "", -1)
 
@@ -115,10 +115,10 @@ func handleClientPacketAuthentication(client *global.Client, ctx *msnp_context, 
 			saltpw := fmt.Sprintf("%s%s", hex.EncodeToString([]byte(fmt.Sprintf("%d", client.Account.RegistrationTime))), password)
 			//unix :=
 
-			util.Debug("MSNP -> handleClientPacketAuthenticationBegin -> MD5", "md5 salt test: %v", []byte(hex.EncodeToString([]byte(fmt.Sprintf("%d", client.Account.RegistrationTime)))))
-			util.Debug("MSNP -> handleClientPacketAuthenticationBegin -> MD5", "pw data MD5 test: %v", []byte(password))
-			util.Debug("MSNP -> handleClientPacketAuthenticationBegin -> MD5", "pw data MD5 test2: %v", []byte(util.HashMD5(saltpw)))
-			util.Debug("MSNP -> handleClientPacketAuthenticationBegin -> MD5", "pw data MD5 test2 plain: %v", util.HashMD5(saltpw))
+			util.Log(util.TRACE, "MSNP -> handleClientPacketAuthenticationBegin -> MD5", "md5 salt test: %v", []byte(hex.EncodeToString([]byte(fmt.Sprintf("%d", client.Account.RegistrationTime)))))
+			util.Log(util.TRACE, "MSNP -> handleClientPacketAuthenticationBegin -> MD5", "pw data MD5 test: %v", []byte(password))
+			util.Log(util.TRACE, "MSNP -> handleClientPacketAuthenticationBegin -> MD5", "pw data MD5 test2: %v", []byte(util.HashMD5(saltpw)))
+			util.Log(util.TRACE, "MSNP -> handleClientPacketAuthenticationBegin -> MD5", "pw data MD5 test2 plain: %v", util.HashMD5(saltpw))
 
 			util.WriteTraffic(client.Connection, msnp_new_command(data, "USR", fmt.Sprintf("MD5 S %s", hex.EncodeToString([]byte(fmt.Sprintf("%d", client.Account.RegistrationTime))))))
 

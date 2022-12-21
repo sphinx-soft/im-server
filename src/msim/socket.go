@@ -35,7 +35,7 @@ func HandleClients(client *global.Client) {
 		receivedpackets := strings.Split(string(data), "final\\")
 		for i := 0; i < len(receivedpackets); i++ {
 			if strings.Contains(receivedpackets[i], "\\") {
-				util.Debug("MySpace -> HandleClients -> TCP", "Reading Split Data: %s", string(receivedpackets[i]+"final\\"))
+				util.Log(util.TRACE, "MySpace -> HandleClients -> TCP", "Reading Split Data: %s", string(receivedpackets[i]+"final\\"))
 				handleClientIncomingPackets(client, &ctx, []byte(receivedpackets[i]+"final\\"))
 				handleClientIncomingPersistPackets(client, &ctx, []byte(receivedpackets[i]+"final\\"))
 			}
@@ -52,14 +52,14 @@ func HandleClients(client *global.Client) {
 
 	for i := 0; i < len(global.Clients); i++ {
 		if global.Clients[i].Account.Email == client.Account.Email {
-			util.Debug("MySpace -> HandleClients", "Removing from clients from Client List...")
+			util.Log(util.TRACE, "MySpace -> HandleClients", "Removing from clients from Client List...")
 			global.Clients = global.RemoveClient(global.Clients, i)
 		}
 	}
 
 	for ix := 0; ix < len(users_context); ix++ {
 		if users_context[ix].sesskey == ctx.sesskey {
-			util.Debug("MySpace -> HandleClients", "Removing from clients from Context List...")
+			util.Log(util.TRACE, "MySpace -> HandleClients", "Removing from clients from Context List...")
 			users_context = removeUserContext(users_context, ix)
 		}
 	}

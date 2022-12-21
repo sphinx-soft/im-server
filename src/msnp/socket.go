@@ -15,9 +15,9 @@ func HandleNotification() {
 
 		go func() {
 			if err != nil {
-				util.Error("MSNP -> HandleNotification", "Failed to accept Client! ", err.Error())
+				util.Log(util.INFO, "MSNP -> HandleNotification", "Failed to accept Client! ", err.Error())
 			} else {
-				util.Debug("MSNP -> HandleNotification", "Accepted Client")
+				util.Log(util.TRACE, "MSNP -> HandleNotification", "Accepted Client")
 			}
 
 			util.Log(util.INFO, "MSN Messenger", "Client awaiting authentication from %s", tcpClient.RemoteAddr().String())
@@ -43,9 +43,9 @@ func HandleNotification() {
 				for ix := 0; ix < len(recv); ix++ {
 					recv[ix] = string(bytes.Trim([]byte(recv[ix]), "\x00"))
 					if recv[ix] != "" {
-						util.Debug("MSNP -> HandleNotification -> TCP", "Reading Split Data: %s", string(recv[ix]))
+						util.Log(util.TRACE, "MSNP -> HandleNotification -> TCP", "Reading Split Data: %s", string(recv[ix]))
 						handleClientIncomingPackets(&client, &ctx, recv[ix])
-						//util.Debug("MSNP -> HandleNotification", "TCP dbg: %v", []byte(string(recv[ix])))
+						//util.Log(util.TRACE, "MSNP -> HandleNotification", "TCP dbg: %v", []byte(string(recv[ix])))
 					}
 				}
 
@@ -62,14 +62,14 @@ func HandleNotification() {
 
 			for i := 0; i < len(global.Clients); i++ {
 				if global.Clients[i].Account.Email == client.Account.Email {
-					util.Debug("MSNP -> HandleNotification", "Removing from clients from Clients List...")
+					util.Log(util.TRACE, "MSNP -> HandleNotification", "Removing from clients from Clients List...")
 					global.Clients = global.RemoveClient(global.Clients, i)
 				}
 			}
 
 			for ix := 0; ix < len(msn_context_list); ix++ {
 				if msn_context_list[ix].ctxkey == ctx.ctxkey {
-					util.Debug("MSNP -> HandleNotification", "Removing from clients from Context List...")
+					util.Log(util.TRACE, "MSNP -> HandleNotification", "Removing from clients from Context List...")
 					msn_context_list = removeUserContext(msn_context_list, ix)
 				}
 			}
@@ -93,7 +93,7 @@ func HandleDispatch(client *global.Client, firstread string) {
 
 	// Send first response command to MSN Client, Requesting INF Data
 	if !handleClientProtocolVersionRequest(client, firstread) {
-		util.Debug("MSNP -> HandleDispatch", "Unsupported MSNP Version requested, closing...")
+		util.Log(util.TRACE, "MSNP -> HandleDispatch", "Unsupported MSNP Version requested, closing...")
 		client.Connection.Close()
 		return
 	}
@@ -106,9 +106,9 @@ func HandleDispatch(client *global.Client, firstread string) {
 		for ix := 0; ix < len(recv); ix++ {
 			recv[ix] = string(bytes.Trim([]byte(recv[ix]), "\x00"))
 			if recv[ix] != "" {
-				util.Debug("MSNP -> HandleDispatch -> TCP", "Reading Split Data: %s", string(recv[ix]))
+				util.Log(util.TRACE, "MSNP -> HandleDispatch -> TCP", "Reading Split Data: %s", string(recv[ix]))
 				handleClientIncomingPackets(client, &ctx, recv[ix])
-				//util.Debug("MSNP -> HandleDispatch", "TCP dbg: %v", []byte(string(recv[ix])))
+				//util.Log(util.TRACE, "MSNP -> HandleDispatch", "TCP dbg: %v", []byte(string(recv[ix])))
 			}
 		}
 
@@ -125,14 +125,14 @@ func HandleDispatch(client *global.Client, firstread string) {
 
 	for i := 0; i < len(global.Clients); i++ {
 		if global.Clients[i].Account.Email == client.Account.Email {
-			util.Debug("MSNP -> HandleDispatch", "Removing from clients from Clients List...")
+			util.Log(util.TRACE, "MSNP -> HandleDispatch", "Removing from clients from Clients List...")
 			global.Clients = global.RemoveClient(global.Clients, i)
 		}
 	}
 
 	for ix := 0; ix < len(msn_context_list); ix++ {
 		if msn_context_list[ix].ctxkey == ctx.ctxkey {
-			util.Debug("MSNP -> HandleDispatch", "Removing from clients from Context List...")
+			util.Log(util.TRACE, "MSNP -> HandleDispatch", "Removing from clients from Context List...")
 			msn_context_list = removeUserContext(msn_context_list, ix)
 		}
 	}
@@ -148,9 +148,9 @@ func HandleSwitchboard() {
 
 		go func() {
 			if err != nil {
-				util.Error("MSNP -> HandleSwitchboard", "Failed to accept Client! ", err.Error())
+				util.Log(util.INFO, "MSNP -> HandleSwitchboard", "Failed to accept Client! ", err.Error())
 			} else {
-				util.Debug("MSNP -> HandleSwitchboard", "Accepted Client")
+				util.Log(util.TRACE, "MSNP -> HandleSwitchboard", "Accepted Client")
 			}
 
 			util.Log(util.INFO, "MSN Messenger", "Client joining switchboard from %s", tcpClient.RemoteAddr().String())
@@ -161,14 +161,14 @@ func HandleSwitchboard() {
 			mail := strings.Replace(findValueFromData("USR", string(data), 1), "@hotmail.com", util.GetMailDomain(), -1)
 			for i := 0; i < len(msn_switchboard_list); i++ {
 				if msn_switchboard_list[i].email == mail {
-					util.Debug("MSNP -> HandleSwitchboard", "Found Switchboard Context by Mail!")
+					util.Log(util.TRACE, "MSNP -> HandleSwitchboard", "Found Switchboard Context by Mail!")
 					ctx = *msn_switchboard_list[i]
 					ctx.connection = tcpClient
 				}
 			}
 
 			if !handleClientSwitchboardPacketAuthentication(&ctx, string(data)) {
-				util.Debug("MSNP -> HandleSwitchboard", "Failed to authenticate Switchboard session, closing...")
+				util.Log(util.TRACE, "MSNP -> HandleSwitchboard", "Failed to authenticate Switchboard session, closing...")
 				tcpClient.Close()
 				return
 			}
@@ -181,9 +181,9 @@ func HandleSwitchboard() {
 				for ix := 0; ix < len(recv); ix++ {
 					recv[ix] = string(bytes.Trim([]byte(recv[ix]), "\x00"))
 					if recv[ix] != "" {
-						util.Debug("MSNP -> HandleSwitchboard -> TCP", "Reading Split Data: %s", string(recv[ix]))
+						util.Log(util.TRACE, "MSNP -> HandleSwitchboard -> TCP", "Reading Split Data: %s", string(recv[ix]))
 						handleClientIncomingSwitchboardPackets(&ctx, recv[ix])
-						//util.Debug("MSNP -> HandleNotification", "TCP dbg: %v", []byte(string(recv[ix])))
+						//util.Log(util.TRACE, "MSNP -> HandleNotification", "TCP dbg: %v", []byte(string(recv[ix])))
 					}
 				}
 
@@ -200,7 +200,7 @@ func HandleSwitchboard() {
 
 			for i := 0; i < len(msn_switchboard_list); i++ {
 				if msn_switchboard_list[i].email == ctx.email {
-					util.Debug("MSNP -> HandleSwitchboard", "Removing from clients from Context List...")
+					util.Log(util.TRACE, "MSNP -> HandleSwitchboard", "Removing from clients from Context List...")
 					msn_switchboard_list = removeSwitchboardContext(msn_switchboard_list, i)
 				}
 			}
