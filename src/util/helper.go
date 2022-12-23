@@ -9,9 +9,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"io"
-	"log"
-	"net"
 
+	externalip "github.com/glendc/go-external-ip"
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 )
@@ -107,21 +106,15 @@ func HashMD5(text string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-var ip net.IP
-
 // Get preferred outbound ip of this machine
-func GetOutboundIP() net.IP {
-	if ip.String() == "" {
-		conn, err := net.Dial("udp", "8.8.8.8:80")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer conn.Close()
+func GetOutboundIP() string {
+	conn := externalip.DefaultConsensus(nil, nil)
+	ip, err := conn.ExternalIP()
 
-		localAddr := conn.LocalAddr().(*net.UDPAddr)
-
-		ip = localAddr.IP
+	if err != nil {
+		Log(WARN, "Failed to get Outbound IP: %s", err.Error())
+		return "<Unknown>"
 	}
 
-	return ip
+	return ip.String()
 }

@@ -56,7 +56,8 @@ func main() {
 	util.Log(util.INFO, "Main", "Syncing Database")
 	util.InitDatabase()
 
-	util.Log(util.INFO, "Network Service", "Server's Outbound IP: %s", util.GetOutboundIP().String())
+	util.Log(util.INFO, "Network Service", "Waiting on Outbound IP Trace...")
+	util.Log(util.INFO, "Network Service", "Server's Outbound IP: %s", util.GetOutboundIP())
 
 	if util.GetServiceEnabled("msnp") || util.GetServiceEnabled("msim") {
 		util.Log(util.INFO, "Service Handler", "Launched Handler for Port 1863")
@@ -74,7 +75,7 @@ func main() {
 
 	if util.GetServiceEnabled("http") {
 		util.Log(util.INFO, "Service Handler", "Launched Handler for HTTP Server")
-		go http.RunWebServer(80)
+		go http.RunWebServer()
 	}
 
 	c := make(chan os.Signal, 1)

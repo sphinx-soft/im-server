@@ -17,7 +17,7 @@ func CreateListener(port int) net.Listener {
 		os.Exit(1)
 	}
 
-	Log(+INFO, "TCP Listener", "Listening on 0.0.0.0:%d", port)
+	Log(INFO, "TCP Listener", "Listening on 0.0.0.0:%d", port)
 
 	return tcpServer
 }
