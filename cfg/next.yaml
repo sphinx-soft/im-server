@@ -1,5 +1,5 @@
 connection:
-  mail: phantom-im.xyz
+  mail: next.im
   root: localhost
   dblogin: phantom:throwaway
 encryption:
