@@ -1,7 +1,7 @@
 connection:
   mail: phantom-im.xyz
   root: localhost
-  dblogin: phantom:11ee..22
+  dblogin: phantom:throwaway
 encryption:
   aes: empty
   rsa: empty
