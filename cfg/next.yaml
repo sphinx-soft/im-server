@@ -1,0 +1,12 @@
+connection:
+  mail: phantom-im.xyz
+  root: localhost
+  dblogin: phantom:11ee..22
+encryption:
+  aes: empty
+  rsa: empty
+services:
+  myspace: true
+  msn: false
+  yahoo: false
+  api: false
