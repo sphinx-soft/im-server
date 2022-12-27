@@ -1,8 +1,8 @@
 package configuration
 
 import (
+	"chimera/utility/logging"
 	"os"
-	"phantom/utility/logging"
 
 	"gopkg.in/yaml.v3"
 )

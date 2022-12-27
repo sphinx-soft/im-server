@@ -1,11 +1,11 @@
 package tcp
 
 import (
+	"chimera/utility"
+	"chimera/utility/logging"
 	"fmt"
 	"net"
 	"os"
-	"phantom/utility"
-	"phantom/utility/logging"
 	"time"
 )
 
@@ -29,6 +29,18 @@ func CreateListener(port int) TcpConnection {
 	}
 
 	return conn
+}
+
+func (tcp *TcpConnection) AcceptClient() error {
+	lst, err := tcp.server.Accept()
+
+	tcp.client = lst
+
+	return err
+}
+
+func (tcp *TcpConnection) GetRemoteAddress() string {
+	return tcp.client.RemoteAddr().String()
 }
 
 func (tcp *TcpConnection) WriteTraffic(data string) error {

@@ -16,12 +16,12 @@ while getopts 'b:h?' opt; do
 
             if [[ $OPTARG = "stripped" ]]
             then
-               go build -o ../build/im-next -ldflags '-s'
+               go build -o ../build/im-next -ldflags '-s' -x  -v
             fi
 
             if [[ $OPTARG = "full" ]]
             then
-                go build -o ../build/im-next
+                go build -o ../build/im-next -x -v
             fi
 
             echo "done building."

@@ -3,7 +3,7 @@ package logging
 import "fmt"
 
 func internal(prefix string, suffix string, text string, format ...any) {
-	fmt.Printf(fmt.Sprintf("\033[34mphantom | im-server\033[0m | %s -> \033[35m%s\033[0m: %s", prefix, suffix, text), format...)
+	fmt.Printf(fmt.Sprintf("\033[34mchimera | im-server\033[0m | %s -> \033[35m%s\033[0m: %s", prefix, suffix, text), format...)
 	fmt.Println()
 }
 

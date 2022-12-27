@@ -1,10 +1,10 @@
 package database
 
 import (
+	"chimera/utility/configuration"
+	"chimera/utility/logging"
 	"database/sql"
 	"fmt"
-	"phantom/utility/configuration"
-	"phantom/utility/logging"
 
 	_ "github.com/go-sql-driver/mysql"
 )
