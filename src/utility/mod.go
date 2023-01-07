@@ -1,9 +1,7 @@
 package utility
 
 import (
-	"bytes"
 	"math/rand"
-	"strings"
 
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
@@ -14,9 +12,7 @@ func GetBuild() string {
 	return "Next Beta 1 (2.0.1.0)"
 }
 
-func SanitizeString(str string) string {
-	return strings.Replace(string(bytes.Trim([]byte(str), "\x00")), "\r\n", "", -1)
-}
+// SanitizeString is no longer needed
 
 func RandomString(length int) string {
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
