@@ -41,7 +41,7 @@ func ConvertToUTF16LE(input string) []byte {
 }
 
 func ByteSliceToHex(slice []byte) string {
-	originalBytes := []byte("go")
+	originalBytes := slice
 
 	result := make([]byte, 4*len(originalBytes))
 
