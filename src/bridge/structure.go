@@ -11,8 +11,8 @@ type BridgeDelivery struct {
 	Action   string
 }
 
-var clients []BridgeClient
-var packets []BridgeDelivery
+var clients []*BridgeClient
+var packets []*BridgeDelivery
 
 const (
 	ServiceAPI     int = 0

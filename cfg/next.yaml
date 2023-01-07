@@ -1,7 +1,7 @@
 connection:
-  mail: next.im
+  mail: chimera.im
   root: localhost
-  dblogin: phantom:throwaway
+  dblogin: im:throwaway
 encryption:
   aes: empty
   rsa: empty

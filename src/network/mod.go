@@ -20,13 +20,17 @@ type Details struct {
 type Account struct {
 	UIN         int
 	DisplayName string
-	Username    string
+	Mail        string
 	Password    string
-	SignupDate  int
 }
 
 type User struct {
-	AvatarBlob string
+	UIN             int
+	AvatarBlob      string
+	AvatarImageType string
+	StatusMessage   string
+	LastLogin       int64
+	SignupDate      int
 }
 
 type Contact struct {
@@ -42,4 +46,4 @@ type OfflineMessage struct {
 	MessageContent string
 }
 
-var Clients []Client
+var Clients []*Client

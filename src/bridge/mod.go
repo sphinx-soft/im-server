@@ -21,7 +21,7 @@ func SignOnService(svcname string, svcid int, svcrev string, svccfg bool, svc fu
 		ServiceRev: svcrev,
 	}
 
-	clients = append(clients, service)
+	clients = append(clients, &service)
 
 	logging.Info("Logon Service", "%s Service SignOn (Id: %d, Rev: %s)", svcname, svcid, svcrev)
 
@@ -36,7 +36,7 @@ func SendMessage(sender int, recv int, action string) {
 	}
 
 	apptex.Lock()
-	packets = append(packets, msg)
+	packets = append(packets, &msg)
 	apptex.Unlock()
 }
 
@@ -52,6 +52,6 @@ func ProcessMessages(svcid int) {
 	deltex.Unlock()
 }
 
-func DeliverMessages(packet BridgeDelivery) {
+func DeliverMessages(packet *BridgeDelivery) {
 
 }

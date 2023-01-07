@@ -50,11 +50,11 @@ func (tcp *TcpConnection) WriteTraffic(data string) error {
 }
 
 func (tcp *TcpConnection) ReadTraffic() (data string, err error) {
-	return tcp.ExReadTraffic(0)
+	return tcp.ExReadTraffic(time.Time{})
 }
 
-func (tcp *TcpConnection) ExReadTraffic(timeout int) (data string, err error) {
-	tcp.client.SetReadDeadline(time.Now().Add(time.Millisecond * time.Duration(timeout)))
+func (tcp *TcpConnection) ExReadTraffic(timeout time.Time) (data string, err error) {
+	tcp.client.SetReadDeadline(timeout)
 
 	buf := make([]byte, 4096)
 	_, err = tcp.client.Read(buf)
@@ -69,4 +69,8 @@ func (tcp *TcpConnection) ExReadTraffic(timeout int) (data string, err error) {
 	logging.Trace("TCP/ReadTraffic", "Reading Data: %s", ret)
 
 	return ret, err
+}
+
+func (tcp *TcpConnection) CloseConnection() error {
+	return tcp.client.Close()
 }

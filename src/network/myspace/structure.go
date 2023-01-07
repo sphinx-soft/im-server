@@ -17,13 +17,12 @@ type MySpaceStatus struct {
 }
 
 type MySpaceUserDetails struct {
-	UIN             int
-	AvatarImageType string
-	FavouriteBand   string
-	FavouriteSong   string
-	Age             int
-	Gender          string
-	Location        string
-	StatusMessage   string
-	LastLogin       int64
+	UIN           int
+	FavouriteBand string
+	FavouriteSong string
+	Age           int
+	Gender        string
+	Location      string
 }
+
+var clientContexts []*MySpaceContext

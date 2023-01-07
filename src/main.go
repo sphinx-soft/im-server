@@ -4,22 +4,23 @@ import (
 	"chimera/bridge"
 	"chimera/network/myspace"
 	"chimera/utility"
+	"chimera/utility/configuration"
+	"chimera/utility/database"
+	"chimera/utility/logging"
 	"os"
 	"os/signal"
 	"syscall"
-
-	//	"chimera/utility/database"
-
-	"chimera/utility/configuration"
-	"chimera/utility/logging"
 )
 
 func main() {
 	logging.Info("Main", "Starting Chimera...")
 	logging.Info("Main", "Build Info: [%s]", utility.GetBuild())
 
-	bridge.SignOnService("MySpace", bridge.ServiceMySpace, "2.0", configuration.GetConfiguration().Services.MySpace, myspace.LogonMySpace)
-	//bridge.SignOnService("MSN", bridge.ServiceMSN, "1.0", configuration.GetConfiguration().Services.MSN, msn.LogonMSN)
+	database.Initialize()
+
+	svc := configuration.GetConfiguration().Services
+	bridge.SignOnService("MySpace", bridge.ServiceMySpace, "2.0", svc.MySpace, myspace.LogonMySpace)
+	//bridge.SignOnService("MSN", bridge.ServiceMSN, "1.0", svc.MSN, msn.LogonMSN)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

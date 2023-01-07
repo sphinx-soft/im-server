@@ -13,5 +13,6 @@
             "username": "root",
             "password": ""
         }
-    ]
+    ],
+    "vscord.enabled": true
 }
