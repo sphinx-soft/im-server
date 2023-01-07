@@ -1,6 +1,8 @@
 package utility
 
 import (
+	"bytes"
+	"fmt"
 	"math/rand"
 	"strings"
 
@@ -36,4 +38,20 @@ func ConvertToUTF16LE(input string) []byte {
 		return nil
 	}
 	return bytes
+}
+
+func ByteSliceToHex(slice []byte) string {
+	originalBytes := []byte("go")
+
+	result := make([]byte, 4*len(originalBytes))
+
+	buff := bytes.NewBuffer(result)
+
+	fmt.Fprintf(buff, "[ ")
+	for _, b := range originalBytes {
+		fmt.Fprintf(buff, "%02x ", b)
+	}
+	fmt.Fprintf(buff, "]")
+
+	return buff.String()
 }

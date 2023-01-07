@@ -3,7 +3,6 @@ package tcp
 import (
 	"chimera/utility"
 	"chimera/utility/logging"
-	"encoding/hex"
 	"fmt"
 	"net"
 	"os"
@@ -51,7 +50,7 @@ func (tcp *TcpConnection) WriteTraffic(data string) error {
 }
 
 func (tcp *TcpConnection) BinaryWriteTraffic(data []byte) error {
-	logging.Trace("TCP/WriteTraffic", "Writing Data: %v", []byte(hex.EncodeToString(data))) //untested
+	logging.Trace("TCP/WriteTraffic", "Writing Data: %s", utility.ByteSliceToHex(data)) //untested
 	_, err := tcp.client.Write([]byte(data))
 	return err
 }
