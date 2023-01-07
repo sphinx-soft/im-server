@@ -1,11 +1,11 @@
 package tcp
 
 import (
-	"chimera/utility"
 	"chimera/utility/logging"
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -44,7 +44,7 @@ func (tcp *TcpConnection) GetRemoteAddress() string {
 }
 
 func (tcp *TcpConnection) WriteTraffic(data string) error {
-	logging.Trace("TCP/WriteTraffic", "Writing Data: %s", utility.SanitizeString(data))
+	logging.Trace("TCP/WriteTraffic", "Writing Data: %s", strings.TrimRight(data, "\r\n"))
 	_, err := tcp.client.Write([]byte(data))
 	return err
 }
@@ -56,19 +56,20 @@ func (tcp *TcpConnection) ReadTraffic() (data string, err error) {
 func (tcp *TcpConnection) ExReadTraffic(timeout time.Time) (data string, err error) {
 	tcp.client.SetReadDeadline(timeout)
 
-	buf := make([]byte, 4096)
-	_, err = tcp.client.Read(buf)
+	buf := make([]byte, 65535)
+	length, err := tcp.client.Read(buf)
 
 	if err != nil {
 		logging.Error("TCP/ReadTraffic", "Failed to read traffic! (%s)", err.Error())
-		return string(buf), err
+		return "", err
 	}
 
-	ret := utility.SanitizeString(string(buf))
+	ret := make([]byte, length)
+	copy(ret, buf)
 
-	logging.Trace("TCP/ReadTraffic", "Reading Data: %s", ret)
+	logging.Trace("TCP/ReadTraffic", "Reading Data: %s", strings.TrimRight(string(ret), "\r\n"))
 
-	return ret, err
+	return string(ret), err
 }
 
 func (tcp *TcpConnection) CloseConnection() error {
