@@ -67,9 +67,10 @@ func (tcp *TcpConnection) ExReadTraffic(timeout time.Time) (data string, err err
 	ret := make([]byte, length)
 	copy(ret, buf)
 
-	logging.Trace("TCP/ReadTraffic", "Reading Data: %s", strings.TrimRight(string(ret), "\r\n"))
+	trimRet := strings.TrimRight(string(ret), "\r\n")
+	logging.Trace("TCP/ReadTraffic", "Reading Data: %s", trimRet)
 
-	return string(ret), err
+	return trimRet, err
 }
 
 func (tcp *TcpConnection) CloseConnection() error {
