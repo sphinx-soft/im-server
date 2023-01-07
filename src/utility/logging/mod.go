@@ -8,25 +8,29 @@ func internal(prefix string, suffix string, text string, format ...any) {
 }
 
 func Info(suffix string, text string, format ...any) {
-	internal("\033[32mINFO \033[0m", suffix, text, format...)
+	internal("\033[32mINFO  \033[0m", suffix, text, format...)
 }
 
 func Warn(suffix string, text string, format ...any) {
-	internal("\033[33mWARN \033[0m", suffix, text, format...)
+	internal("\033[33mWARN  \033[0m", suffix, text, format...)
 }
 
 func Error(suffix string, text string, format ...any) {
-	internal("\033[31mERROR\033[0m", suffix, text, format...)
+	internal("\033[31mERROR \033[0m", suffix, text, format...)
 }
 
 func Fatal(suffix string, text string, format ...any) {
-	internal("\033[38;5;89mFATAL\033[0m", suffix, text, format...)
+	internal("\033[38;5;89mFATAL \033[0m", suffix, text, format...)
 }
 
 func Trace(suffix string, text string, format ...any) {
-	internal("\033[36mTRACE\033[0m", suffix, text, format...)
+	internal("\033[36mTRACE \033[0m", suffix, text, format...)
 }
 
 func Debug(suffix string, text string, format ...any) {
-	internal("\033[38;5;99mDEBUG\033[0m", suffix, text, format...)
+	internal("\033[38;5;99mDEBUG \033[0m", suffix, text, format...)
+}
+
+func System(suffix string, text string, format ...any) {
+	internal("\033[38;5;172mSYSTEM\033[0m", suffix, text, format...)
 }

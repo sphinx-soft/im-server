@@ -11,7 +11,7 @@ import (
 
 func GetBuild() string {
 	// Specifier (Major.Minor.Push.Hotfix)
-	return "Next Beta 1 (2.0.0.0)"
+	return "Next Beta 1 (2.0.1.0)"
 }
 
 func SanitizeString(str string) string {

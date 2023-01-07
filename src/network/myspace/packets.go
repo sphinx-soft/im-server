@@ -9,10 +9,25 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 )
 
-// packets
+// handlers
+
+func MySpaceHandleClientIncomingPackages(cli *network.Client, ctx *MySpaceContext, stream string) {
+	switch {
+	case strings.HasPrefix(stream, "\\persist"):
+		MySpaceHandleClientIncomingCallbacks(cli, ctx, stream)
+	case strings.HasPrefix(stream, "\\status"):
+		MySpaceHandleClientPacketSetStatusMessage(cli, ctx, stream)
+	}
+}
+
+func MySpaceHandleClientIncomingCallbacks(cli *network.Client, ctx *MySpaceContext, stream string) {
+
+}
 
 func MySpaceHandleClientAuthentication(cli *network.Client, ctx *MySpaceContext) bool {
 	cli.Connection.WriteTraffic(MySpaceBuildPackage([]MySpaceDataPair{
@@ -23,7 +38,7 @@ func MySpaceHandleClientAuthentication(cli *network.Client, ctx *MySpaceContext)
 
 	loginPacket, err := cli.Connection.ReadTraffic()
 	if err != nil {
-		logging.Error("MySpace/Authentication", "Failed to read Login2 data packet!")
+		logging.Error("MySpace/Authentication", "Failed to read Login2 data packet! (%s)", err.Error())
 		return false
 	}
 
@@ -33,7 +48,7 @@ func MySpaceHandleClientAuthentication(cli *network.Client, ctx *MySpaceContext)
 
 	cli.ClientAccount, err = database.GetAccountDataByEmail(email)
 	if err != nil {
-		logging.Error("MySpace/Authentication", "Failed to fetch Account Data!")
+		logging.Error("MySpace/Authentication", "Failed to fetch Account Data! (%s)", err.Error())
 		return false
 	}
 
@@ -77,7 +92,7 @@ func MySpaceHandleClientAuthentication(cli *network.Client, ctx *MySpaceContext)
 
 	b64data, err := base64.StdEncoding.DecodeString(response)
 	if err != nil {
-		logging.Error("MySpace/Authentication", "Invalid base64 provided at login packet.")
+		logging.Error("MySpace/Authentication", "Invalid base64 provided at login packet. (%s)", err.Error())
 		return false
 	}
 
@@ -120,4 +135,347 @@ func MySpaceHandleClientAuthentication(cli *network.Client, ctx *MySpaceContext)
 	}
 
 	return false
+}
+
+func MySpaceHandleClientLogoutRequest(data string) bool {
+	return strings.HasPrefix(data, "\\logout")
+}
+
+func MySpaceHandleClientBroadcastSigninStatus(cli *network.Client, ctx *MySpaceContext) {
+	for ix := 0; ix < len(network.Clients); ix++ {
+		if network.Clients[ix].ClientAccount.UIN != cli.ClientAccount.UIN { // make sure we dont fuck the client up by sending it to ourselves
+			row, err := database.Query("SELECT * from contacts WHERE SenderUIN= ?", cli.ClientAccount.UIN)
+
+			if err != nil {
+				logging.Error("MySpace/MySpaceHandleClientBroadcastSigninStatus", "Failed to get contact list for uin: %d (%s)", cli.ClientAccount.UIN, err.Error())
+				return
+			}
+
+			for row.Next() {
+				var contact network.Contact
+				err = row.Scan(&contact.SenderUIN, &contact.FriendUIN, &contact.Reason)
+
+				if err != nil {
+					logging.Error("MySpace/MySpaceHandleClientBroadcastSigninStatus", "Failed to scan contact lists (%s)", err.Error())
+					row.Close()
+					return
+				}
+
+				if network.Clients[ix].ClientAccount.UIN == contact.FriendUIN { // send the signon broadcast only to people on our friends list, otherwise the client will add them which is bad.
+					var count int
+					innerrow, err := database.Query("SELECT COUNT(*) from contacts WHERE SenderUIN= ? AND RecvUIN= ?", network.Clients[ix].ClientAccount.UIN, cli.ClientAccount.UIN)
+
+					if err != nil {
+						logging.Error("MySpace/MySpaceHandleClientBroadcastSigninStatus", "Failed to count contact list shit (%s)", err.Error())
+						row.Close()
+						return
+					}
+
+					innerrow.Next()
+					innerrow.Scan(&count)
+					innerrow.Close()
+
+					if count > 0 {
+						network.Clients[ix].Connection.WriteTraffic(MySpaceBuildPackage([]MySpaceDataPair{
+							MySpaceNewDataInt("bm", 100),
+							MySpaceNewDataInt("f", cli.ClientAccount.UIN),
+							MySpaceNewDataGeneric("msg", fmt.Sprintf("|s|%d|ss|%s", ctx.Status.Code, ctx.Status.Message)),
+						}))
+						cli.Connection.WriteTraffic(MySpaceBuildPackage([]MySpaceDataPair{
+							MySpaceNewDataInt("bm", 100),
+							MySpaceNewDataInt("f", network.Clients[ix].ClientAccount.UIN),
+							MySpaceNewDataGeneric("msg", fmt.Sprintf("|s|%d|ss|%s", clientContexts[ix].Status.Code, clientContexts[ix].Status.Message)),
+						}))
+
+					}
+				}
+			}
+			row.Close()
+
+		}
+	}
+
+	logging.System("MySpace", "Broadcasted Sign In Status for UIN: %d / SN: %s", cli.ClientAccount.UIN, cli.ClientAccount.DisplayName)
+}
+
+func MySpaceHandleClientKeepalive(cli *network.Client) {
+	for {
+		time.Sleep(180 * time.Second)
+		if cli.Connection.WriteTraffic(MySpaceBuildPackage([]MySpaceDataPair{MySpaceNewDataBoolean("ka", true)})) != nil {
+			break
+		}
+	}
+}
+
+func MySpaceHandleClientBroadcastLogoffStatus(cli *network.Client, ctx *MySpaceContext) {
+	for ix := 0; ix < len(network.Clients); ix++ {
+		if network.Clients[ix].ClientAccount.UIN != cli.ClientAccount.UIN {
+			row, err := database.Query("SELECT * from contacts WHERE SenderUIN= ?", cli.ClientAccount.UIN)
+
+			if err != nil {
+				logging.Error("MySpace/MySpaceHandleClientBroadcastLogoffStatus", "Failed to get contact list for uin: %d (%s)", cli.ClientAccount.UIN, err.Error())
+				return
+			}
+
+			for row.Next() {
+				var contact network.Contact
+				err = row.Scan(&contact.SenderUIN, &contact.FriendUIN, &contact.Reason)
+
+				if err != nil {
+					logging.Error("MySpace/MySpaceHandleClientBroadcastLogoffStatus", "Failed to scan contact lists (%s)", err.Error())
+					row.Close()
+					return
+				}
+
+				if network.Clients[ix].ClientAccount.UIN == contact.FriendUIN {
+					var count int
+					innerrow, err := database.Query("SELECT COUNT(*) from contacts WHERE SenderUIN= ? AND RecvUIN= ?", network.Clients[ix].ClientAccount.UIN, cli.ClientAccount.UIN)
+
+					if err != nil {
+						logging.Error("MySpace/MySpaceHandleClientBroadcastLogoffStatus", "Failed to count contact list shit (%s)", err.Error())
+						row.Close()
+						return
+					}
+
+					innerrow.Next()
+					innerrow.Scan(&count)
+					innerrow.Close()
+
+					if count > 0 {
+						network.Clients[ix].Connection.WriteTraffic(MySpaceBuildPackage([]MySpaceDataPair{
+							MySpaceNewDataInt("bm", 100),
+							MySpaceNewDataInt("f", cli.ClientAccount.UIN),
+							MySpaceNewDataGeneric("msg", fmt.Sprintf("|s|0|ss|%s", ctx.Status.Message)),
+						}))
+					}
+				}
+			}
+			row.Close()
+		}
+	}
+
+	logging.System("MySpace", "Broadcasted Logoff Status for UIN: %d / SN: %s", cli.ClientAccount.UIN, cli.ClientAccount.DisplayName)
+}
+
+func MySpaceHandleClientOfflineMessagesDelivery(cli *network.Client, ctx *MySpaceContext) {
+	row, err := database.Query("SELECT * from offlinemsgs WHERE RecvUIN= ?", cli.ClientAccount.UIN)
+
+	if err != nil {
+		logging.Error("MySpace/MySpaceHandleClientOfflineMessagesDelivery", "Failed to get offline messages list for uin: %d (%s)", cli.ClientAccount.UIN, err.Error())
+		return
+	}
+
+	for row.Next() {
+		var message network.OfflineMessage
+		err = row.Scan(&message.SenderUIN, &message.RecvUIN, &message.MessageDate, &message.MessageContent)
+
+		if err != nil {
+			logging.Error("MySpace/MySpaceHandleClientOfflineMessagesDelivery", "Failed to scan offline messages list of uin: %d (%s)", cli.ClientAccount.UIN, err.Error())
+			row.Close()
+			return
+		}
+
+		cli.Connection.WriteTraffic(MySpaceBuildPackage([]MySpaceDataPair{
+			MySpaceNewDataInt("bm", 1),
+			MySpaceNewDataInt("sesskey", ctx.SessionKey),
+			MySpaceNewDataInt("f", message.SenderUIN),
+			MySpaceNewDataGeneric("msg", message.MessageContent),
+		}))
+	}
+	row.Close()
+
+	row, err = database.Query("DELETE from offlinemsgs WHERE RecvUIN= ?", cli.ClientAccount.UIN)
+
+	if err != nil {
+		logging.Error("MySpace/MySpaceHandleClientOfflineMessagesDelivery", "Failed to delete offline messages for uin: %d (%s)", cli.ClientAccount.UIN, err.Error())
+		return
+	}
+
+	row.Close()
+
+	logging.System("MySpace", "Delivered Offline Messages for UIN: %d / SN: %s", cli.ClientAccount.UIN, cli.ClientAccount.DisplayName)
+}
+
+// packets
+
+func MySpaceHandleClientPacketSetStatusMessage(cli *network.Client, ctx *MySpaceContext, stream string) {
+	ctx.Status.Code, _ = strconv.Atoi(MySpaceRetrieveKeyValue("status", stream))
+	ctx.Status.Message = MySpaceRetrieveKeyValue("statstring", stream)
+
+	row, err := database.Query("UPDATE userdetails SET StatusMessage= ? WHERE UIN= ?", ctx.Status.Message, cli.ClientAccount.UIN)
+
+	if err != nil {
+		logging.Error("MySpace/MySpaceHandleClientPacketSetStatusMessage", "Failed to update status message for uin: %d (%s)", cli.ClientAccount.UIN, err.Error())
+		return
+	}
+
+	row.Close()
+
+	for ix := 0; ix < len(network.Clients); ix++ {
+		if network.Clients[ix].ClientAccount.UIN != cli.ClientAccount.UIN { // make sure we dont fuck the client up by sending it to ourselves
+			row, err := database.Query("SELECT * from contacts WHERE SenderUIN= ?", cli.ClientAccount.UIN)
+
+			if err != nil {
+				logging.Error("MySpace/MySpaceHandleClientBroadcastSigninStatus", "Failed to get contact list for uin: %d (%s)", cli.ClientAccount.UIN, err.Error())
+				return
+			}
+
+			for row.Next() {
+				var contact network.Contact
+				err = row.Scan(&contact.SenderUIN, &contact.FriendUIN, &contact.Reason)
+
+				if err != nil {
+					logging.Error("MySpace/MySpaceHandleClientBroadcastSigninStatus", "Failed to scan contact lists (%s)", err.Error())
+					row.Close()
+					return
+				}
+
+				if network.Clients[ix].ClientAccount.UIN == contact.FriendUIN { // send the signon broadcast only to people on our friends list, otherwise the client will add them which is bad.
+					var count int
+					innerrow, err := database.Query("SELECT COUNT(*) from contacts WHERE SenderUIN= ? AND RecvUIN= ?", network.Clients[ix].ClientAccount.UIN, cli.ClientAccount.UIN)
+
+					if err != nil {
+						logging.Error("MySpace/MySpaceHandleClientBroadcastSigninStatus", "Failed to count contact list shit (%s)", err.Error())
+						row.Close()
+						return
+					}
+
+					innerrow.Next()
+					innerrow.Scan(&count)
+					innerrow.Close()
+
+					if count > 0 {
+						network.Clients[ix].Connection.WriteTraffic(MySpaceBuildPackage([]MySpaceDataPair{
+							MySpaceNewDataInt("bm", 100),
+							MySpaceNewDataInt("f", cli.ClientAccount.UIN),
+							MySpaceNewDataGeneric("msg", fmt.Sprintf("|s|%d|ss|%s", ctx.Status.Code, ctx.Status.Message)),
+						}))
+					}
+				}
+			}
+			row.Close()
+
+		}
+	}
+
+	logging.System("MySpace", "Broadcasted New Status for UIN: %d / SN: %s (Code: %d, Message: %s)", cli.ClientAccount.UIN, cli.ClientAccount.DisplayName, ctx.Status.Code, ctx.Status.Message)
+}
+
+func MySpaceHandleClientPacketAddBuddy(cli *network.Client, ctx *MySpaceContext, stream string) {
+	friend_id := MySpaceRetrieveKeyValue("newprofileid", stream)
+	if friend_id == "6221" {
+		// System Messages Bot cannot be added as a friend, yet
+		return
+	}
+
+	var count int
+	row, err := database.Query("SELECT COUNT(*) from contacts WHERE SenderUIN= ? AND RecvUIN= ?", cli.ClientAccount.UIN, friend_id)
+
+	if err != nil {
+		logging.Error("MySpace/MySpaceHandleClientPacketAddBuddy", "Failed to count contacts for uin: %d (%s)", cli.ClientAccount.UIN, err.Error())
+		return
+	}
+
+	row.Next()
+	row.Scan(&count)
+	row.Close()
+
+	if count > 0 {
+		// already a friend, ignore
+		cli.Connection.WriteTraffic(MySpaceBuildPackage([]MySpaceDataPair{
+			MySpaceNewDataBoolean("error", true),
+			MySpaceNewDataGeneric("errmsg", "The profile requested is already a buddy."),
+			MySpaceNewDataInt("err", 1539),
+		}))
+		return
+	}
+
+	row, err = database.Query("INSERT into contacts (`SenderUIN`, `RecvUIN`) VALUES (?, ?)", cli.ClientAccount.UIN, friend_id)
+
+	if err != nil {
+		logging.Error("MySpace/MySpaceHandleClientPacketAddBuddy", "Failed to insert new contact for uin: %d (%s)", cli.ClientAccount.UIN, err.Error())
+		return
+	}
+
+	row.Close()
+
+	row, err = database.Query("SELECT COUNT(*) from contacts WHERE SenderUIN= ? AND RecvUIN= ?", friend_id, cli.ClientAccount.UIN)
+
+	if err != nil {
+		logging.Error("MySpace/MySpaceHandleClientPacketAddBuddy", "Failed to count contacts for uin: %d (friend of: %d) (%s)", friend_id, cli.ClientAccount.UIN, err.Error())
+		return
+	}
+
+	row.Next()
+	row.Scan(&count)
+	row.Close()
+
+	if count > 0 {
+		for ix := 0; ix < len(network.Clients); ix++ {
+			if strconv.Itoa(network.Clients[ix].ClientAccount.UIN) == friend_id {
+				cli.Connection.WriteTraffic(MySpaceBuildPackage([]MySpaceDataPair{
+					MySpaceNewDataInt("bm", 100),
+					MySpaceNewDataInt("f", network.Clients[ix].ClientAccount.UIN),
+					MySpaceNewDataGeneric("msg", fmt.Sprintf("|s|%d|ss|%s", clientContexts[ix].Status.Code, clientContexts[ix].Status.Message)),
+				}))
+				network.Clients[ix].Connection.WriteTraffic(MySpaceBuildPackage([]MySpaceDataPair{
+					MySpaceNewDataInt("bm", 100),
+					MySpaceNewDataInt("f", cli.ClientAccount.UIN),
+					MySpaceNewDataGeneric("msg", fmt.Sprintf("|s|%d|ss|%s", ctx.Status.Code, ctx.Status.Message)),
+				}))
+			}
+		}
+	}
+
+	logging.System("MySpace", "New Buddy Added! UIN: %d -> UIN: %d", cli.ClientAccount.UIN, friend_id)
+}
+
+func MySpaceHandleClientPacketDeleteBuddy(cli *network.Client, stream string) {
+	delete_id := MySpaceRetrieveKeyValue("delprofileid", stream)
+
+	var count int
+	row, err := database.Query("SELECT COUNT(*) from contacts WHERE SenderUIN= ? AND RecvUIN= ?", cli.ClientAccount.UIN, delete_id)
+
+	if err != nil {
+		logging.Error("MySpace/MySpaceHandleClientPacketDeleteBuddy", "Failed to count contacts for uin: %d (%s)", cli.ClientAccount.UIN, err.Error())
+		return
+	}
+
+	row.Next()
+	row.Scan(&count)
+	row.Close()
+
+	if count > 0 {
+		row, err := database.Query("DELETE from contacts WHERE SenderUIN= ? AND RecvUIN= ?", cli.ClientAccount.UIN, delete_id)
+
+		if err != nil {
+			logging.Error("MySpace/MySpaceHandleClientPacketDeleteBuddy", "Failed to delete contact for uin: %d (%s)", cli.ClientAccount.UIN, err.Error())
+			return
+		}
+
+		row.Close()
+
+		for ix := 0; ix < len(network.Clients); ix++ {
+
+			row, err := database.Query("SELECT COUNT(*) from contacts WHERE SenderUIN= ? AND RecvUIN= ?", cli.ClientAccount.UIN, delete_id)
+
+			if err != nil {
+				logging.Error("MySpace/MySpaceHandleClientPacketDeleteBuddy", "Failed to count contacts for uin: %d (%s)", cli.ClientAccount.UIN, err.Error())
+				return
+			}
+
+			row.Next()
+			row.Scan(&count)
+			row.Close()
+
+			if count > 0 {
+				network.Clients[ix].Connection.WriteTraffic(MySpaceBuildPackage([]MySpaceDataPair{
+					MySpaceNewDataInt("bm", 100),
+					MySpaceNewDataInt("f", cli.ClientAccount.UIN),
+					MySpaceNewDataGeneric("msg", "|s|0|ss|Offline"),
+				}))
+			}
+
+		}
+	}
 }

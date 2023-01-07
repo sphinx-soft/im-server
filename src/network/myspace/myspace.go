@@ -5,6 +5,8 @@ import (
 	"chimera/utility"
 	"chimera/utility/logging"
 	"chimera/utility/tcp"
+	"fmt"
+	"strings"
 
 	"golang.org/x/exp/slices"
 )
@@ -46,7 +48,43 @@ func LogonMySpace() {
 			network.Clients = append(network.Clients, &client)
 			clientContexts = append(clientContexts, &context)
 
-			LogoutMySpace(&client, &context)
+			MySpaceHandleClientBroadcastSigninStatus(&client, &context)
+			MySpaceHandleClientOfflineMessagesDelivery(&client, &context)
+
+			for {
+				stream, err := client.Connection.ReadTraffic()
+
+				recv := strings.Split(stream, "final\\")
+				for ix := 0; ix < len(recv); ix++ {
+					if strings.Contains(recv[ix], "\\") {
+						fix := fmt.Sprintf("%sfinal\\", recv[ix]) // this is a side effect of the split, we need to reattach the final as to not break everything
+						logging.Trace("MySpace/Service", "Split TCP Readout: %s", fix)
+						MySpaceHandleClientIncomingPackages(&client, &context, fix)
+					}
+				}
+
+				if err != nil || MySpaceHandleClientLogoutRequest(stream) {
+					break
+				}
+			}
+
+			MySpaceHandleClientBroadcastLogoffStatus(&client, &context)
+
+			logging.Info("MySpace", "Client signed out! (UIN: %d, SN: %s)", client.ClientAccount.UIN, client.ClientAccount.DisplayName)
+
+			for i := 0; i < len(network.Clients); i++ {
+				if network.Clients[i].ClientAccount.UIN == client.ClientAccount.UIN {
+					logging.Debug("MySpace/Service", "Removing from client from Client List...")
+					network.Clients = slices.Delete(network.Clients, i, i+1)
+				}
+			}
+
+			for ix := 0; ix < len(clientContexts); ix++ {
+				if clientContexts[ix].SessionKey == context.SessionKey {
+					logging.Debug("MySpace/Service", "Removing from client from Context List...")
+					clientContexts = slices.Delete(clientContexts, ix, ix+1)
+				}
+			}
 		}()
 	}
 
@@ -54,23 +92,4 @@ func LogonMySpace() {
 	//		bridge.ProcessMessages(bridge.ServiceMySpace)
 	//	}
 
-}
-
-func LogoutMySpace(cli *network.Client, ctx *MySpaceContext) {
-
-	logging.Info("MySpace", "Client signed out! (UIN: %d, SN: %s)", cli.ClientAccount.UIN, cli.ClientAccount.DisplayName)
-
-	for i := 0; i < len(network.Clients); i++ {
-		if network.Clients[i].ClientAccount.UIN == cli.ClientAccount.UIN {
-			logging.Debug("MySpace/Service", "Removing from client from Client List...")
-			network.Clients = slices.Delete(network.Clients, i, i+1)
-		}
-	}
-
-	for ix := 0; ix < len(clientContexts); ix++ {
-		if clientContexts[ix].SessionKey == ctx.SessionKey {
-			logging.Debug("MySpace/Service", "Removing from client from Context List...")
-			clientContexts = slices.Delete(clientContexts, ix, ix+1)
-		}
-	}
 }
