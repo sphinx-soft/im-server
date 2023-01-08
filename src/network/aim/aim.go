@@ -1,6 +1,7 @@
 package aim
 
 import (
+	"bytes"
 	"chimera/network"
 	"chimera/utility/logging"
 	"chimera/utility/tcp"
@@ -28,51 +29,47 @@ func LogonAIM() {
 				Connection: tcpServer,
 			}
 
-			// currently sequence and versionHandshaken are here, but they
+			flapVersion := []byte{0x00, 0x00, 0x00, 0x01}
+
+			// currently sequence are here, but they
 			// might move later
 			sequence := uint16(rand.Intn(0xFFFF))
-			versionHandshaken := false
 
 			versionFlap := FLAPPacket{
 				Frame:    FrameSignOn,
 				Sequence: sequence,
-				Data:     []byte{0x00, 0x00, 0x00, 0x01},
+				Data:     flapVersion,
 			}
 
 			client.Connection.BinaryWriteTraffic(FLAPDeserialize(versionFlap))
 
 			for {
 				combined, err := client.Connection.BinaryReadTraffic()
-
 				if err != nil {
 					break
 				}
 
-				packets, hasErr := FLAPSerialize(combined)
-				if hasErr {
+				packets, err := FLAPSerialize(combined)
+				if err != nil {
 					break
 				}
 
 				for _, packet := range packets {
-					if packet.Frame != FrameSignOn && !versionHandshaken {
-						break
-					}
-
 					switch packet.Frame {
 					case FrameSignOn:
-						versionHandshaken = true
+						if bytes.Equal(packet.Data, flapVersion) {
+							continue
+						}
+						// this is old FLAP authentication, TODO: implement this
 
 					case FrameData:
-						// SNAC data frame
-
-					case FrameError:
-						// Error frame
-
-					case FrameSignOff:
-						// Sign off frame
+						// this is snac data
+						
 					}
 				}
 			}
+
+			client.Connection.CloseConnection()
 		}()
 	}
 
