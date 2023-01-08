@@ -39,7 +39,7 @@ func LogonAIM() {
 				Data:     []byte{0x00, 0x00, 0x00, 0x01},
 			}
 
-			client.Connection.BinaryWriteTraffic(FLAPSerialize(versionFlap))
+			client.Connection.BinaryWriteTraffic(FLAPDeserialize(versionFlap))
 
 			for {
 				combined, err := client.Connection.BinaryReadTraffic()
@@ -48,14 +48,14 @@ func LogonAIM() {
 					break
 				}
 
-				packets, hasErr := FLAPDeserialize(combined)
+				packets, hasErr := FLAPSerialize(combined)
 				if hasErr {
 					break
 				}
 
 				for _, packet := range packets {
 					if packet.Frame != FrameSignOn && !versionHandshaken {
-						return
+						break
 					}
 
 					switch packet.Frame {

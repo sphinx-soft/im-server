@@ -17,21 +17,7 @@ type FLAPPacket struct {
 	Data     []byte
 }
 
-func FLAPSerialize(packet FLAPPacket) []byte {
-	flap := make([]byte, 6+len(packet.Data))
-
-	flap[0] = 0x2A
-	flap[1] = packet.Frame
-
-	// I'm so glad I can use slicing here
-	binary.BigEndian.PutUint16(flap[2:4], packet.Sequence)
-	binary.BigEndian.PutUint16(flap[4:6], uint16(len(packet.Data)))
-
-	copy(flap[6:], packet.Data)
-	return flap
-}
-
-func FLAPDeserialize(flap []byte) (outPackets []FLAPPacket, hasErr bool) {
+func FLAPSerialize(flap []byte) (outPackets []FLAPPacket, hasErr bool) {
 	packets := []FLAPPacket{}
 
 	i := 0
@@ -59,4 +45,18 @@ func FLAPDeserialize(flap []byte) (outPackets []FLAPPacket, hasErr bool) {
 	}
 
 	return packets, false
+}
+
+func FLAPDeserialize(packet FLAPPacket) []byte {
+	flap := make([]byte, 6+len(packet.Data))
+
+	flap[0] = 0x2A
+	flap[1] = packet.Frame
+
+	// I'm so glad I can use slicing here
+	binary.BigEndian.PutUint16(flap[2:4], packet.Sequence)
+	binary.BigEndian.PutUint16(flap[4:6], uint16(len(packet.Data)))
+
+	copy(flap[6:], packet.Data)
+	return flap
 }
