@@ -84,3 +84,14 @@ func MySpaceIdentifyProtocolRevision(clientver string) string {
 
 	return ""
 }
+
+func MySpaceEscapeString(data string) string {
+	res := strings.Replace(data, "/", "/1", -1)
+	res = strings.Replace(res, "\\", "\\2", -1)
+	return res
+}
+func MySpaceUnescapeString(data string) string {
+	res := strings.Replace(data, "/1", "/", -1)
+	res = strings.Replace(res, "\\2", "\\", -1)
+	return res
+}
