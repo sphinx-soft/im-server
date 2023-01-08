@@ -22,11 +22,23 @@ func MySpaceHandleClientIncomingPackages(cli *network.Client, ctx *MySpaceContex
 		MySpaceHandleClientIncomingCallbacks(cli, ctx, stream)
 	case strings.HasPrefix(stream, "\\status"):
 		MySpaceHandleClientPacketSetStatusMessage(cli, ctx, stream)
+	case strings.HasPrefix(stream, "\\addbuddy"):
+		MySpaceHandleClientPacketAddBuddy(cli, ctx, stream)
+	case strings.HasPrefix(stream, "\\delbuddy"):
+		MySpaceHandleClientPacketDeleteBuddy(cli, stream)
+	case strings.HasPrefix(stream, "\\bm\\1"):
+		MySpaceHandleClientPacketBuddyInstantMessage(cli, ctx, stream)
 	}
 }
 
+//	Reading Data: 	\persist\1\sesskey\1\cmd\1\dsn\6\uid\10000\lid\11\rid\7\body\Target=mail∟FriendID=10000\final\
+//						\persist\1\sesskey\1\cmd\1\dsn\6\uid\10000\lid\11\rid\23\body\Target=mail∟FriendID=10000\final\
+//
+// this is hell; Also still missing the return for 1611 which is link callback request
 func MySpaceHandleClientIncomingCallbacks(cli *network.Client, ctx *MySpaceContext, stream string) {
-
+	if strings.Contains(stream, "\\persist\\1\\sesskey\\1\\cmd\\1\\dsn\\6\\uid\\10000\\lid\\11") {
+		MySpaceHandleClientCallbackNetLinkRequest(cli, stream)
+	}
 }
 
 func MySpaceHandleClientAuthentication(cli *network.Client, ctx *MySpaceContext) bool {
@@ -279,6 +291,7 @@ func MySpaceHandleClientOfflineMessagesDelivery(cli *network.Client, ctx *MySpac
 			MySpaceNewDataInt("bm", 1),
 			MySpaceNewDataInt("sesskey", ctx.SessionKey),
 			MySpaceNewDataInt("f", message.SenderUIN),
+			MySpaceNewDataInt("date", message.MessageDate),
 			MySpaceNewDataGeneric("msg", message.MessageContent),
 		}))
 	}
@@ -478,4 +491,54 @@ func MySpaceHandleClientPacketDeleteBuddy(cli *network.Client, stream string) {
 
 		}
 	}
+}
+
+// bm type 1 -> IM
+func MySpaceHandleClientPacketBuddyInstantMessage(cli *network.Client, ctx *MySpaceContext, stream string) {
+	isOnline := false
+	msg := MySpaceRetrieveKeyValue("msg", stream)
+	recv_id := MySpaceRetrieveKeyValue("t", stream)
+
+	for ix := 0; ix < len(network.Clients); ix++ {
+		if strconv.Itoa(network.Clients[ix].ClientAccount.UIN) == recv_id {
+			isOnline = true
+			network.Clients[ix].Connection.WriteTraffic(MySpaceBuildPackage([]MySpaceDataPair{
+				MySpaceNewDataInt("bm", 1),
+				MySpaceNewDataInt("sesskey", clientContexts[ix].SessionKey),
+				MySpaceNewDataInt("f", cli.ClientAccount.UIN),
+				MySpaceNewDataGeneric("msg", msg),
+			}))
+		}
+	}
+
+	if !isOnline {
+		if !strings.Contains(msg, "%typing%") && !strings.Contains(msg, "%stoptyping%") {
+			row, err := database.Query("INSERT into offlinemsgs (`SenderUIN`, `RecvUIN`, `MessageDate`, `MessageContent`)", cli.ClientAccount.UIN, recv_id, time.Now().UTC().Unix(), msg)
+
+			if err != nil {
+				logging.Error("MySpace/MySpaceHandleClientPacketBuddyInstantMessage", "Failed to insert offline for uin: %d (%s)", recv_id, err.Error())
+				return
+			}
+
+			row.Close()
+		}
+	}
+}
+
+func MySpaceHandleClientCallbackNetLinkRequest(cli *network.Client, stream string) {
+	cmd, _ := strconv.Atoi(MySpaceRetrieveKeyValue("cmd", stream))
+
+	//test
+	res := MySpaceBuildPackage([]MySpaceDataPair{
+		MySpaceNewDataBoolean("persistr", true),
+		MySpaceNewDataInt("uid", cli.ClientAccount.UIN),
+		MySpaceNewDataInt("cmd", cmd^256),
+		MySpaceNewDataGeneric("dsn", MySpaceRetrieveKeyValue("dsn", stream)),
+		MySpaceNewDataGeneric("lid", MySpaceRetrieveKeyValue("lid", stream)),
+		MySpaceNewDataGeneric("rid", MySpaceRetrieveKeyValue("rid", stream)),
+		MySpaceNewDataGeneric("body", MySpaceBuildInnerBody([]MySpaceDataPair{
+			MySpaceNewDataGeneric("SourceURL", MySpaceEscapeString("http://google.de")),
+		})),
+	})
+	cli.Connection.WriteTraffic(res)
 }
