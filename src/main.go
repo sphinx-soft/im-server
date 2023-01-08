@@ -2,6 +2,7 @@ package main
 
 import (
 	"chimera/bridge"
+	"chimera/network/aim"
 	"chimera/network/myspace"
 	"chimera/utility"
 	"chimera/utility/configuration"
@@ -20,6 +21,7 @@ func main() {
 
 	svc := configuration.GetConfiguration().Services
 	bridge.SignOnService("MySpace", bridge.ServiceMySpace, "2.0", svc.MySpace, myspace.LogonMySpace)
+	bridge.SignOnService("AIM", bridge.ServiceAIM, "1.0", svc.AIM, aim.LogonAIM)
 	//bridge.SignOnService("MSN", bridge.ServiceMSN, "1.0", svc.MSN, msn.LogonMSN)
 
 	c := make(chan os.Signal, 1)

@@ -60,8 +60,7 @@ func (tcp *TcpConnection) ReadTraffic() (data string, err error) {
 }
 
 func (tcp *TcpConnection) BinaryReadTraffic() (data []byte, err error) {
-	str, fehler := tcp.ExReadTraffic(time.Time{})
-	return []byte(str), fehler
+	return tcp.ExBinaryReadTraffic(time.Time{})
 }
 
 func (tcp *TcpConnection) ExReadTraffic(timeout time.Time) (data string, err error) {
@@ -82,6 +81,25 @@ func (tcp *TcpConnection) ExReadTraffic(timeout time.Time) (data string, err err
 	logging.Trace("TCP/ReadTraffic", "Reading Data: %s", retstr)
 
 	return retstr, err
+}
+
+func (tcp *TcpConnection) ExBinaryReadTraffic(timeout time.Time) (data []byte, err error) {
+	tcp.client.SetReadDeadline(timeout)
+
+	buf := make([]byte, 65535)
+	length, err := tcp.client.Read(buf)
+
+	if err != nil {
+		logging.Error("TCP/ReadTraffic", "Failed to read traffic! (%s)", err.Error())
+		return []byte{}, err
+	}
+
+	ret := make([]byte, length)
+	copy(ret, buf)
+
+	logging.Trace("TCP/ReadTraffic", "Reading Data: %s", utility.ByteSliceToHex(ret))
+
+	return ret, err
 }
 
 func (tcp *TcpConnection) CloseConnection() error {
