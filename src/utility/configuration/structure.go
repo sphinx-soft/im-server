@@ -15,5 +15,6 @@ type ConfigData struct {
 		MSN     bool
 		Yahoo   bool
 		API     bool
+		AIM     bool
 	}
 }

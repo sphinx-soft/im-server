@@ -19,4 +19,5 @@ const (
 	ServiceMySpace int = 1
 	ServiceMSN     int = 2
 	ServiceYahoo   int = 3
+	ServiceAIM     int = 4
 )
