@@ -371,7 +371,12 @@ func MySpaceHandleClientPacketSetStatusMessage(cli *network.Client, ctx *MySpace
 		}
 	}
 
-	logging.System("MySpace", "Broadcasted New Status for UIN: %d / SN: %s (Code: %d, Message: %s)", cli.ClientAccount.UIN, cli.ClientAccount.DisplayName, ctx.Status.Code, ctx.Status.Message)
+	ss := ctx.Status.Message
+	if ss == "" {
+		ss = "none"
+	}
+
+	logging.System("MySpace", "Broadcasted New Status for UIN: %d / SN: %s (Code: %d, Message: %s)", cli.ClientAccount.UIN, cli.ClientAccount.DisplayName, ctx.Status.Code, ss)
 }
 
 func MySpaceHandleClientPacketAddBuddy(cli *network.Client, ctx *MySpaceContext, stream string) {

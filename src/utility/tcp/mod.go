@@ -44,13 +44,13 @@ func (tcp *TcpConnection) GetRemoteAddress() string {
 }
 
 func (tcp *TcpConnection) WriteTraffic(data string) error {
-	logging.Trace("TCP/WriteTraffic", "Writing Data: %s", utility.SanitizeString(data))
+	logging.Trace("TCP/WriteTraffic (String)", "Data Length: %d, Data Stream: %s", len(data), utility.SanitizeString(data))
 	_, err := tcp.client.Write([]byte(data))
 	return err
 }
 
 func (tcp *TcpConnection) BinaryWriteTraffic(data []byte) error {
-	logging.Trace("TCP/WriteTraffic", "Writing Data: %s", utility.ByteSliceToHex(data)) //untested
+	logging.Trace("TCP/WriteTraffic (Binary)", "Data Length: %d, Data Stream: %s", len(data), utility.ByteSliceToHex(data)) //untested
 	_, err := tcp.client.Write([]byte(data))
 	return err
 }
@@ -70,7 +70,7 @@ func (tcp *TcpConnection) ExReadTraffic(timeout time.Time) (data string, err err
 	length, err := tcp.client.Read(buf)
 
 	if err != nil {
-		logging.Error("TCP/ReadTraffic", "Failed to read traffic! (%s)", err.Error())
+		logging.Error("TCP/ReadTraffic (String)", "Failed to read traffic! (%s)", err.Error())
 		return "", err
 	}
 
@@ -78,7 +78,7 @@ func (tcp *TcpConnection) ExReadTraffic(timeout time.Time) (data string, err err
 	copy(ret, buf)
 
 	retstr := utility.SanitizeString(string(ret))
-	logging.Trace("TCP/ReadTraffic", "Reading Data: %s", retstr)
+	logging.Trace("TCP/ReadTraffic (String)", "Data Length: %d, Data Stream: %s", len(ret), retstr)
 
 	return retstr, err
 }
@@ -90,14 +90,14 @@ func (tcp *TcpConnection) ExBinaryReadTraffic(timeout time.Time) (data []byte, e
 	length, err := tcp.client.Read(buf)
 
 	if err != nil {
-		logging.Error("TCP/ReadTraffic", "Failed to read traffic! (%s)", err.Error())
+		logging.Error("TCP/ReadTraffic (Binary)", "Failed to read traffic! (%s)", err.Error())
 		return []byte{}, err
 	}
 
 	ret := make([]byte, length)
 	copy(ret, buf)
 
-	logging.Trace("TCP/ReadTraffic", "Reading Data: %s", utility.ByteSliceToHex(ret))
+	logging.Trace("TCP/ReadTraffic (Binary)", "Data Length: %d, Data Stream: %s", len(ret), utility.ByteSliceToHex(ret))
 
 	return ret, err
 }

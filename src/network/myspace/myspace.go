@@ -58,7 +58,6 @@ func LogonMySpace() {
 				for ix := 0; ix < len(recv); ix++ {
 					if strings.Contains(recv[ix], "\\") {
 						fix := fmt.Sprintf("%sfinal\\", recv[ix]) // this is a side effect of the split, we need to reattach the final as to not break everything
-						logging.Trace("MySpace/Service", "Split TCP Readout: %s", fix)
 						MySpaceHandleClientIncomingPackages(&client, &context, fix)
 					}
 				}
